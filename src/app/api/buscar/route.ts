@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loadCatalog } from "@/lib/catalog";
+import { saludDelRecorte } from "@/lib/counts";
 import { metricasPorDepartamento } from "@/lib/mapa-metricas";
 import { buscar } from "@/lib/search";
 import { fechaHoraLima } from "@/lib/text";
@@ -94,6 +95,7 @@ export function GET(request: NextRequest) {
       generadoLabel: fechaHoraLima(corpus.generatedAt),
       intervalMinutes: corpus.intervalMinutes,
       datosValidos: corpus.datosValidos,
+      recorte: saludDelRecorte(corpus, filtro),
     },
     aviso: aviso(
       corpus.generatedAt,

@@ -64,6 +64,16 @@ interface Ingestion {
   ultimoAvanceLabel: string | null;
   intervalMinutes: number;
   datosValidos: boolean;
+  recorte?: {
+    activo: boolean;
+    filas: number;
+    pdfConRuta: number;
+    pdfOk: number;
+    pdfRevision: number;
+    pdfError: number;
+    pdfSinDescargar: number;
+    sinTerritorio: number;
+  };
 }
 interface Payload {
   listo: boolean;
@@ -231,8 +241,22 @@ export function Searcher() {
 
   const resumen = data?.resumen;
   const ingestion = data?.ingestion;
-  const pdfMax = Math.max(ingestion?.pdfConRuta || 0, 1);
-  const pdfHechos = (ingestion?.pdfOk || 0) + (ingestion?.pdfRevision || 0) + (ingestion?.pdfError || 0);
+  const salud = ingestion?.recorte?.activo ? ingestion.recorte : ingestion;
+  const pdfMax = Math.max(salud?.pdfConRuta || 0, 1);
+  const pdfHechos = (salud?.pdfOk || 0) + (salud?.pdfRevision || 0) + (salud?.pdfError || 0);
+  const lugarRecorte = distrito
+    ? distritos.find((item) => item.lugarId === distrito)?.nombre
+    : provincia
+      ? provincias.find((item) => item.codigo === provincia)?.nombre
+      : departamento
+        ? catalogo?.departamentos.find((item) => item.codigo === departamento)?.nombre
+        : tipo === "regional"
+          ? "gobiernos regionales"
+          : tipo === "provincial"
+            ? "municipalidades provinciales"
+            : tipo === "distrital"
+              ? "municipalidades distritales"
+              : null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:items-start">
@@ -479,25 +503,44 @@ export function Searcher() {
           <h2 id="avance" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Salud de la ingestión</h2>
         </div>
         <p className="mt-3 text-sm text-muted">
-          Esto mide la lectura del listado y de los PDF. No es el porcentaje de proclamaciones del país.
+          {ingestion?.recorte?.activo
+            ? `Cifras de ${lugarRecorte || "este recorte"}. Miden la lectura de los PDF de ese filtro, no las proclamaciones.`
+            : "Esto mide la lectura del listado y de los PDF. No es el porcentaje de proclamaciones del país."}
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
             <div className="mb-1 flex justify-between text-sm">
               <span>PDFs procesados</span>
-              <span>{ingestion ? `${miles(pdfHechos)} / ${miles(ingestion.pdfConRuta)}` : "—"}</span>
+              <span>{salud ? `${miles(pdfHechos)} / ${miles(salud.pdfConRuta)}` : "—"}</span>
             </div>
-            <progress value={ingestion ? pdfHechos : 0} max={pdfMax} aria-label="Avance de lectura de PDF" />
+            <progress value={salud ? pdfHechos : 0} max={pdfMax} aria-label={ingestion?.recorte?.activo ? "Avance de lectura de PDF en este recorte" : "Avance de lectura de PDF"} />
           </div>
             <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-muted">Filas del listado</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.filas) : "—"}</dd></div>
-            <div><dt className="text-muted">Declaradas por la fuente</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion?.declaredTotal ? miles(ingestion.declaredTotal) : "—"}</dd></div>
-            <div><dt className="text-muted">Con territorio</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfOk) : "—"}</dd></div>
-            <div><dt className="text-muted">En revisión</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfRevision) : "—"}</dd></div>
-            <div><dt className="text-muted">Error de PDF</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfError) : "—"}</dd></div>
-            <div><dt className="text-muted">Sin descargar</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfSinDescargar) : "—"}</dd></div>
+            <div><dt className="text-muted">{ingestion?.recorte?.activo ? "Filas en este recorte" : "Filas del listado"}</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.filas) : "—"}</dd></div>
+            <div>
+              <dt className="text-muted">{ingestion?.recorte?.activo ? "Sin territorio, fuera" : "Declaradas por la fuente"}</dt>
+              <dd className="font-condensed text-2xl font-bold text-petrol">
+                {ingestion?.recorte?.activo
+                  ? miles(ingestion.recorte.sinTerritorio)
+                  : ingestion?.declaredTotal
+                    ? miles(ingestion.declaredTotal)
+                    : "—"}
+              </dd>
+            </div>
+            <div><dt className="text-muted">Con territorio</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfOk) : "—"}</dd></div>
+            <div><dt className="text-muted">En revisión</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfRevision) : "—"}</dd></div>
+            <div><dt className="text-muted">Error de PDF</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfError) : "—"}</dd></div>
+            <div><dt className="text-muted">Sin descargar</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfSinDescargar) : "—"}</dd></div>
           </dl>
         </div>
+        {ingestion?.recorte?.activo && ingestion.declaredTotal ? (
+          <p className="mt-3 text-sm text-muted">
+            La fuente declara {miles(ingestion.declaredTotal)} filas en todo el país. Ese total no se divide por territorio.
+            {ingestion.recorte.sinTerritorio > 0
+              ? ` ${miles(ingestion.recorte.sinTerritorio)} PDF aún no tienen territorio leído y quedan fuera de este recorte.`
+              : ""}
+          </p>
+        ) : null}
         <p className="mt-3 text-sm">
           Última sincronización exitosa: {ingestion?.listingSyncedLabel || "todavía no"}.
           {" "}Revisión prevista cada {ingestion?.intervalMinutes || 30} minutos en el servidor, hora de Lima (UTC−5).

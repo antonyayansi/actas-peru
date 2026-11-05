@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { catalogoAlineado, loadCatalog } from "../src/lib/catalog";
 import { bloqueaCierre } from "../src/lib/corpus";
-import { resumir } from "../src/lib/counts";
+import { resumir, saludDelRecorte } from "../src/lib/counts";
 import { buscar } from "../src/lib/search";
 import type { PdfEntry } from "../src/lib/types";
 import { actaChallabamba, corpusDe, fila, fixtureCatalog } from "./helpers";
@@ -141,6 +141,35 @@ test("Sullana capital no aparece como municipalidad distrital faltante", () => {
   assert.ok(capital);
   assert.match(capital.estadoEtiqueta, /capital/i);
   assert.equal(busqueda.resumen.tipos.find((item) => item.ambito === "distrital")?.esperados, 0);
+});
+
+test("la salud de la ingestión sigue el territorio y deja fuera el PDF sin departamento", () => {
+  const corpus = corpusChallabamba(true);
+  const pais = saludDelRecorte(corpus, {});
+  assert.equal(pais.activo, false);
+  assert.equal(pais.filas, 2);
+  assert.equal(pais.pdfOk, 1);
+  assert.equal(pais.pdfSinDescargar, 1);
+  assert.equal(pais.sinTerritorio, 1);
+
+  const cusco = saludDelRecorte(corpus, { departamento: "08" });
+  assert.equal(cusco.activo, true);
+  assert.equal(cusco.filas, 1);
+  assert.equal(cusco.pdfOk, 1);
+  assert.equal(cusco.pdfSinDescargar, 0);
+  assert.equal(cusco.sinTerritorio, 1);
+
+  const provincia = saludDelRecorte(corpus, { provincia: "0811" });
+  assert.equal(provincia.filas, 1);
+  assert.equal(provincia.pdfOk, 1);
+
+  const otro = saludDelRecorte(corpus, { departamento: "19" });
+  assert.equal(otro.filas, 0);
+  assert.equal(otro.pdfOk, 0);
+
+  const frase = saludDelRecorte(corpus, { q: "Challabamba" });
+  assert.equal(frase.activo, false);
+  assert.equal(frase.filas, pais.filas);
 });
 
 test("el filtro de Cusco recalcula el resumen y no usa el total nacional", () => {

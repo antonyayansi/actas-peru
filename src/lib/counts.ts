@@ -1,7 +1,7 @@
 import { catalogoAlineado, DENOMINADOR } from "./catalog";
 import { bloqueaCierre } from "./corpus";
 import { miles, porcentajeTexto } from "./text";
-import type { Ambito, Catalog, Corpus, Filtro, Resumen, ResumenTipo } from "./types";
+import type { Ambito, Catalog, Corpus, Documento, Filtro, Resumen, ResumenTipo } from "./types";
 
 const ETIQUETAS: Record<Ambito, string> = {
   regional: "gobiernos regionales",
@@ -75,6 +75,51 @@ export function recorteEsperado(catalog: Catalog, filtro: Filtro): Recorte {
     distrital: DENOMINADOR.distrital,
     filtroActivo,
     esNacional: true,
+  };
+}
+
+export interface SaludRecorte {
+  activo: boolean;
+  filas: number;
+  pdfConRuta: number;
+  pdfOk: number;
+  pdfRevision: number;
+  pdfError: number;
+  pdfSinDescargar: number;
+  sinTerritorio: number;
+}
+
+function documentoEnRecorte(doc: Documento, filtro: Filtro): boolean {
+  if (filtro.distrito) {
+    if (doc.lugarId !== filtro.distrito && doc.ubigeo !== filtro.distrito) return false;
+  } else if (filtro.provincia) {
+    if (doc.provinciaCodigo !== filtro.provincia) return false;
+  } else if (filtro.departamento) {
+    if (doc.departamentoCodigo !== filtro.departamento) return false;
+  }
+  if (filtro.tipo && filtro.tipo !== "todos") {
+    if (filtro.tipo === "regional") {
+      if (doc.ambito !== "regional" && doc.ambito !== "regional_parcial") return false;
+    } else if (doc.ambito !== filtro.tipo) return false;
+  }
+  return true;
+}
+
+export function saludDelRecorte(corpus: Corpus, filtro: Filtro): SaludRecorte {
+  const activo = Boolean(filtro.departamento || filtro.provincia || filtro.distrito || (filtro.tipo && filtro.tipo !== "todos"));
+  const docs = activo ? corpus.documents.filter((doc) => documentoEnRecorte(doc, filtro)) : corpus.documents;
+  const withPath = docs.filter((doc) => doc.pdfPath);
+  return {
+    activo,
+    filas: docs.length,
+    pdfConRuta: withPath.length,
+    pdfOk: withPath.filter((doc) => doc.estado === "acta_publicada").length,
+    pdfRevision: withPath.filter((doc) => doc.estado === "pendiente_revision").length,
+    pdfError: withPath.filter((doc) => doc.estado === "error_fuente").length,
+    pdfSinDescargar: withPath.filter((doc) => doc.estado === "pendiente_extraccion").length,
+    sinTerritorio: corpus.documents.filter(
+      (doc) => doc.pdfPath && !doc.departamentoCodigo && doc.estado !== "acta_publicada",
+    ).length,
   };
 }
 
