@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Actas abiertas">
+  <rect width="64" height="64" rx="14" fill="#0e5c54"/>
+  <rect x="14" y="16" width="28" height="34" rx="3" fill="#f3efe6"/>
+  <rect x="24" y="12" width="26" height="34" rx="3" fill="#fffdf8"/>
+  <path d="M30 24h14M30 30h14M30 36h9" stroke="#0e5c54" stroke-width="2" stroke-linecap="round"/>
+</svg>

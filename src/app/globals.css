@@ -1,0 +1,63 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-source), "Source Sans 3", "Segoe UI", sans-serif;
+  --font-serif: var(--font-fraunces), Georgia, serif;
+  --color-paper: #f3efe6;
+  --color-ink: #1c2824;
+  --color-lagoon: #0e5c54;
+  --color-lagoon-dark: #0a3f3a;
+  --color-clay: #8c4630;
+  --color-line: #e3d8c8;
+  --color-card: #fffdf8;
+  --color-moss: #2c6b4e;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background:
+    radial-gradient(1200px 400px at 10% -10%, rgba(14, 92, 84, 0.08), transparent 50%),
+    var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-lagoon);
+  outline-offset: 2px;
+}
+
+.field {
+  min-height: 2.75rem;
+  width: 100%;
+  border-radius: 0.9rem;
+  border: 1px solid var(--color-line);
+  background: var(--color-card);
+  padding: 0.55rem 0.8rem;
+  font-size: 1rem;
+  color: var(--color-ink);
+}
+
+progress {
+  width: 100%;
+  height: 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e7dfd2;
+}
+
+progress::-webkit-progress-bar {
+  background: #e7dfd2;
+}
+
+progress::-webkit-progress-value {
+  background: var(--color-lagoon);
+}
+
+progress::-moz-progress-bar {
+  background: var(--color-lagoon);
+}

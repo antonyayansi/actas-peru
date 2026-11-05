@@ -1,0 +1,6 @@
+{
+  "observadoEn": "2026-11-05T19:42:00.000Z",
+  "zona": "America/Lima",
+  "fuente": "POST público https://portal.jne.gob.pe/portal/Pagina/Lista_ProclamacionResultadosERM/ declarado por la página ProclamacionResultadoERM",
+  "nota": "Lectura paginada de 200 en 200. iTotalRecords coincidió con las filas únicas por idProclamacion en esa pasada (1404). El listado sigue cambiando; el indexador lo vuelve a leer."
+}
