@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, FileText, Search } from "lucide-react";
+import { AlertTriangle, FileText, RefreshCw, Search } from "lucide-react";
 import { MapaPeru } from "@/components/MapaPeru";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -309,6 +309,22 @@ export function Searcher() {
             }}
           >
             Limpiar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={cargando}
+            onClick={() => {
+              setQ(draft);
+              setRevision((current) => current + 1);
+              fetch("/api/catalogo")
+                .then((response) => response.json())
+                .then(setCatalogo)
+                .catch(() => setError("No se pudo actualizar el catálogo territorial."));
+            }}
+          >
+            <RefreshCw className={cargando ? "size-4 animate-spin" : "size-4"} aria-hidden />
+            Actualizar
           </Button>
         </div>
       </form>
