@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loadCatalog } from "@/lib/catalog";
+import { metricasPorDepartamento } from "@/lib/mapa-metricas";
 import { buscar } from "@/lib/search";
 import { fechaHoraLima } from "@/lib/text";
 import type { Ambito, Filtro } from "@/lib/types";
@@ -42,7 +43,8 @@ export function GET(request: NextRequest) {
     estado: (params.get("estado") as Filtro["estado"]) || "todos",
   };
   const pagina = Number(params.get("pagina") || 1);
-  const busqueda = buscar(loadCatalog(), snapshot.corpus, filtro, Number.isFinite(pagina) ? pagina : 1, 20);
+  const catalogo = loadCatalog();
+  const busqueda = buscar(catalogo, snapshot.corpus, filtro, Number.isFinite(pagina) ? pagina : 1, 20);
   const corpus = snapshot.corpus;
   return NextResponse.json({
     listo: true,
@@ -79,5 +81,6 @@ export function GET(request: NextRequest) {
     ),
     denominador: snapshot.denominador,
     ubigeo: snapshot.ubigeo,
+    porDepartamento: metricasPorDepartamento(catalogo, snapshot.corpus),
   });
 }

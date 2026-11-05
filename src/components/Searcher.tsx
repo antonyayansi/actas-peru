@@ -2,8 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, FileText, Search } from "lucide-react";
+import { MapaPeru } from "@/components/MapaPeru";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { MetricaDepartamento } from "@/lib/mapa-metricas";
+
 import { fechaCorta, miles, porcentajeTexto } from "@/lib/text";
 import type { Autoridad, FuentePublicacion, ResumenTipo } from "@/lib/types";
 
@@ -82,6 +85,7 @@ interface Payload {
   ingestion?: Ingestion;
   aviso?: string | null;
   ubigeo?: { archivo: string; nota: string };
+  porDepartamento?: MetricaDepartamento[];
 }
 
 const AMBITO: Record<string, string> = {
@@ -173,8 +177,8 @@ export function Searcher() {
   const pdfHechos = (ingestion?.pdfOk || 0) + (ingestion?.pdfRevision || 0) + (ingestion?.pdfError || 0);
 
   return (
-    <div className="space-y-6">
-      <section className="space-y-4" aria-labelledby="consulta">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:items-start">
+      <section className="order-1 space-y-4 lg:col-start-2 lg:row-start-1" aria-labelledby="consulta">
       <div className="flex items-center gap-3">
         <span className="mark" aria-hidden="true">1</span>
         <h2 id="consulta" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Consulta</h2>
@@ -326,7 +330,20 @@ export function Searcher() {
         <p role="status" className="panel px-4 py-3 text-sm">{data.mensaje}</p>
       )}
 
-      <section aria-live="polite" aria-labelledby="resumen" className="space-y-4">
+      <div className="order-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <MapaPeru
+          seleccionado={departamento}
+          metricas={data?.porDepartamento ?? []}
+          revisionSinTerritorio={(ingestion?.pdfRevision ?? 0) + (ingestion?.pdfError ?? 0)}
+          onSeleccionar={(codigo) => {
+            setDepartamento(codigo);
+            setProvincia("");
+            setDistrito("");
+            setPagina(1);
+          }}
+        />
+      </div>
+      <section aria-live="polite" aria-labelledby="resumen" className="order-3 space-y-3 lg:col-start-2 lg:row-start-2">
         <div className="flex items-end justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="mark" aria-hidden="true">2</span>
@@ -335,7 +352,7 @@ export function Searcher() {
           {cargando && <span className="text-sm text-muted">Actualizando…</span>}
         </div>
         {!resumen?.datosValidos && data?.listo === false ? null : (
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3">
             {(resumen?.tipos || []).filter((tipo) => tipo.esperados !== 0).map((tipo) => (
               <article key={tipo.ambito} className="overflow-hidden border border-line bg-white">
                 <div className="bg-petrol px-4 py-4 text-white">
@@ -370,7 +387,7 @@ export function Searcher() {
         </div>
       </section>
 
-      <section className="panel p-4 sm:p-5" aria-labelledby="avance">
+      <section className="panel order-4 p-4 sm:p-5 lg:col-span-2" aria-labelledby="avance">
         <div className="flex items-center gap-3">
           <span className="mark" aria-hidden="true">3</span>
           <h2 id="avance" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Salud de la ingestión</h2>
@@ -404,7 +421,7 @@ export function Searcher() {
         {ingestion?.listingError && <p className="mt-2 text-sm text-[#7a2e22]">{ingestion.listingError}</p>}
       </section>
 
-      <section className="space-y-4" aria-labelledby="resultados">
+      <section className="order-5 space-y-4 lg:col-span-2" aria-labelledby="resultados">
         <div className="flex items-end justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="mark" aria-hidden="true">4</span>
@@ -495,7 +512,7 @@ export function Searcher() {
         )}
       </section>
 
-      <section id="fuentes" className="space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6">
+      <section id="fuentes" className="order-6 space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6 lg:col-span-2">
         <h2 className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Fuentes y reglas</h2>
         <p>
           El listado sale del cuadro público de proclamación ERM 2026. Cada fila es un evento de un jurado electoral especial, no una municipalidad. El territorio se lee del PDF. Por eso Challabamba, Caicay, Colquepata y Huancarani, en la provincia de Paucartambo, Cusco, pueden figurar bajo el JEE Quispicanchi.

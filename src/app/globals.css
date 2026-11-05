@@ -38,6 +38,12 @@ body {
   outline-offset: 2px;
 }
 
+svg [role="button"]:focus,
+svg [role="button"]:focus-visible {
+  outline: 0;
+  outline-width: 0;
+}
+
 .field {
   min-height: 2.75rem;
   width: 100%;
