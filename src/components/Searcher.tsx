@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MetricaDepartamento } from "@/lib/mapa-metricas";
 
-import { fechaCorta, miles, porcentajeTexto } from "@/lib/text";
+import { fechaCorta, miles } from "@/lib/text";
 import type { Autoridad, FuentePublicacion, ResumenTipo } from "@/lib/types";
 
 interface DistritoOpt {
@@ -358,45 +358,38 @@ export function Searcher() {
           }}
         />
       </div>
-      <section aria-live="polite" aria-labelledby="resumen" className="order-3 space-y-3 lg:col-start-2 lg:row-start-2">
+      <section aria-live="polite" aria-labelledby="resumen" className="order-3 space-y-2 lg:col-start-2 lg:row-start-2">
         <div className="flex items-end justify-between gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="mark" aria-hidden="true">2</span>
-            <h2 id="resumen" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Del total, cuánto ya se ubicó</h2>
+            <h2 id="resumen" className="font-condensed text-2xl font-bold uppercase leading-none tracking-wide text-petrol">Del total, cuánto ya se ubicó</h2>
           </div>
           {cargando && <span className="text-sm text-muted">Actualizando…</span>}
         </div>
         {!resumen?.datosValidos && data?.listo === false ? null : (
-          <div className="grid gap-3">
+          <div className="overflow-hidden border border-line bg-white">
             {(resumen?.tipos || []).filter((tipo) => tipo.esperados !== 0).map((tipo) => (
-              <article key={tipo.ambito} className="overflow-hidden border border-line bg-white">
-                <div className="bg-petrol px-4 py-4 text-white">
-                  <p className="font-condensed text-sm font-semibold uppercase tracking-wide">{tipo.etiqueta}</p>
-                  <p className="mt-1 font-condensed text-6xl font-bold leading-none text-gold">
+              <article key={tipo.ambito} className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0">
+                <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">{tipo.etiqueta}</p>
+                <p className="shrink-0 text-right">
+                  <span className="font-condensed text-3xl font-bold leading-none text-petrol">
                     {tipo.conActa === null ? "—" : miles(tipo.conActa)}
-                  </p>
-                  <p className="mt-1 text-sm text-white">
-                    de {tipo.esperados === null ? "total pendiente" : miles(tipo.esperados)}
-                  </p>
-                </div>
-                <div className="border-t-4 border-gold px-4 py-3">
-                  <p className="text-sm font-semibold text-petrol">
-                    {tipo.porcentaje === null
-                      ? "Porcentaje no calculado"
-                      : porcentajeTexto(tipo.porcentaje)}
-                  </p>
-                  <p className="mt-1 text-sm text-muted">
-                    {tipo.sinPublicacionEncontrada === null
-                      ? "Sin publicación encontrada: aún no cerrada. No equivale a falta de proclamación."
-                      : `Sin publicación encontrada: ${miles(tipo.sinPublicacionEncontrada)}. No equivale a falta de proclamación.`}
-                  </p>
-                </div>
+                  </span>
+                  <span className="ml-1 text-sm text-muted">
+                    de {tipo.esperados === null ? "pendiente" : miles(tipo.esperados)}
+                  </span>
+                </p>
               </article>
             ))}
+            <p className="border-t-4 border-gold bg-ice px-3 py-2 text-sm leading-5 text-ink">
+              {resumen?.cierre
+                ? "Sin publicación encontrada no equivale a falta de proclamación."
+                : "Porcentaje no calculado. Sin publicación encontrada: aún no cerrada. No equivale a falta de proclamación."}
+            </p>
           </div>
         )}
-        <div className="space-y-2 text-sm leading-6 text-ink">
-          {resumen?.textos.map((linea) => (
+        <div className="space-y-1 text-sm leading-5 text-muted">
+          {(resumen?.textos || []).filter((linea) => !linea.startsWith("De ")).map((linea) => (
             <p key={linea}>{linea}</p>
           ))}
         </div>
