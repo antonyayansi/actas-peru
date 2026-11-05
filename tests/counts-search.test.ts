@@ -138,9 +138,7 @@ test("una fila distrital futura no se cuela en gobiernos regionales ni provincia
   const provincial = buscar(catalog, corpus, { q: "espinar", tipo: "provincial" });
   assert.equal(provincial.resultados.some((item) => item.estado === "programada_sin_acta"), false);
   const distrital = buscar(catalog, corpus, { q: "espinar", tipo: "distrital" });
-  const filaDistrital = distrital.resultados.find((item) => item.jee === "JEE ESPINAR");
-  assert.ok(filaDistrital);
-  assert.equal(filaDistrital.estado, "programada_sin_acta");
+  assert.equal(distrital.resultados.some((item) => item.jee === "JEE ESPINAR"), false);
 });
 
 test("la búsqueda ignora tildes y no mueve Challabamba a Quispicanchi", () => {
@@ -149,11 +147,13 @@ test("la búsqueda ignora tildes y no mueve Challabamba a Quispicanchi", () => {
   assert.equal(porTilde.resultados.some((item) => item.titulo === "Challabamba"), true);
   const porFiltro = buscar(catalog, corpus, { provincia: "0812" });
   assert.equal(porFiltro.resultados.some((item) => item.titulo === "Challabamba"), false);
-  const porJee = buscar(catalog, corpus, { q: "Quispicanchi" });
-  const challa = porJee.resultados.find((item) => item.titulo === "Challabamba");
-  assert.ok(challa);
-  assert.match(challa.lugar, /Paucartambo/);
-  assert.doesNotMatch(challa.lugar, /Quispicanchi/);
+  const porProvincia = buscar(catalog, corpus, { q: "Quispicanchi" });
+  assert.equal(porProvincia.resultados.some((item) => item.titulo === "Challabamba"), false);
+  assert.equal(porProvincia.resultados.some((item) => item.ambito === "provincial" && /Quispicanchi/i.test(item.titulo)), true);
+  assert.equal(porProvincia.resultados.some((item) => item.ambito === "regional"), false);
+  const porPaucartambo = buscar(catalog, corpus, { q: "Paucartambo" });
+  assert.equal(porPaucartambo.resultados.some((item) => item.titulo === "Challabamba"), false);
+  assert.equal(porPaucartambo.resultados.some((item) => item.ambito === "provincial" && /Paucartambo/i.test(item.titulo)), true);
 });
 
 test("Sullana capital no aparece como municipalidad distrital faltante", () => {

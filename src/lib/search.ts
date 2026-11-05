@@ -19,19 +19,20 @@ export interface Busqueda {
   resumen: ReturnType<typeof resumir>;
 }
 
-function haystackScope(scope: AmbitoIndexado): string {
-  return [
-    scope.departamento,
-    scope.provincia,
-    scope.distrito,
-    scope.ubigeo,
-    scope.jee,
-    scope.autoridad?.nombre,
-    scope.autoridad?.organizacion,
-    scope.ambito,
-  ]
-    .filter(Boolean)
-    .join(" ");
+function textoDelNivel(scope: AmbitoIndexado): string {
+  const lugar =
+    scope.ambito === "regional"
+      ? scope.departamento
+      : scope.ambito === "provincial"
+        ? scope.provincia
+        : `${scope.distrito ?? ""} ${scope.ubigeo ?? ""}`;
+  return [lugar, scope.autoridad?.nombre, scope.autoridad?.organizacion].filter(Boolean).join(" ");
+}
+
+function textoDelDocumento(doc: Documento): string {
+  const nivel = nivelDocumento(doc);
+  const lugar = nivel === "regional" ? doc.departamento : nivel === "provincial" ? doc.provincia : doc.distrito;
+  return [lugar, doc.autoridad?.nombre, doc.autoridad?.organizacion].filter(Boolean).join(" ");
 }
 
 function resultadoAmbito(
@@ -197,7 +198,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
     if (filtro.departamento && scope.departamentoCodigo !== filtro.departamento) return;
     if (filtro.provincia && (scope.ambito === "regional" || scope.provinciaCodigo !== filtro.provincia)) return;
     if (filtro.distrito && scope.lugarId !== filtro.distrito && scope.ubigeo !== filtro.distrito) return;
-    if (!lugarCoincideTexto(haystackScope(scope), filtro)) return;
+    if (!lugarCoincideTexto(textoDelNivel(scope), filtro)) return;
     const distrito = catalog.distritos.find((item) => item.lugarId === scope.lugarId) ?? null;
     cards.push(resultadoAmbito(scope, distrito));
     seen.add(scope.key);
@@ -240,7 +241,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
       const lugarId = `provincial:${prov.codigo}`;
       const scope = scopes.get(lugarId);
       const dep = catalog.departamentos.find((item) => item.codigo === prov.departamentoCodigo);
-      const texto = `${prov.nombre} ${prov.nombreMostrar} ${dep?.nombreMostrar ?? ""} provincia`;
+      const texto = `${prov.nombre} ${prov.nombreMostrar}`;
       if (scope) {
         pushScope(scope);
         continue;
@@ -267,7 +268,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
       if (dist.esCapitalProvincial && filtro.estado === "sin_acta") continue;
       const scope = scopes.get(dist.lugarId);
       const dep = catalog.departamentos.find((item) => item.codigo === dist.departamentoCodigo);
-      const texto = `${dist.nombre} ${dist.nombreMostrar} ${dist.provincia} ${dep?.nombre ?? ""} ${dist.ubigeo ?? ""}`;
+      const texto = `${dist.nombre} ${dist.nombreMostrar} ${dist.ubigeo ?? ""}`;
       if (scope && !dist.esCapitalProvincial) {
         pushScope(scope);
         continue;
@@ -308,8 +309,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
       if (filtro.departamento && doc.departamentoCodigo && doc.departamentoCodigo !== filtro.departamento) continue;
       if (filtro.departamento && !doc.departamentoCodigo && filtro.estado !== "pendiente") continue;
       if (filtro.provincia && doc.provinciaCodigo && doc.provinciaCodigo !== filtro.provincia && !parcial) continue;
-      const texto = `${doc.jee} ${doc.tipoListado} ${doc.fechaListadoTexto} ${doc.departamento ?? ""} ${doc.provincia ?? ""} ${doc.distrito ?? ""} ${doc.provinciasParciales.join(" ")}`;
-      if (filtro.q && !matchesQuery(texto, filtro.q)) continue;
+      if (filtro.q && !matchesQuery(textoDelDocumento(doc), filtro.q)) continue;
       if (!filtro.q && !pendiente && !parcial) continue;
       const card = resultadoEvento(doc);
       if (seen.has(card.id)) continue;

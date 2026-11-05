@@ -277,7 +277,7 @@ export function Searcher() {
         <div className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label htmlFor="q" className="mb-1 block text-sm font-semibold">
-              Buscar lugar, alcalde u organización
+              Buscar región, provincia o distrito
             </label>
             <div className="search-field">
               <Search className="size-4 shrink-0 text-petrol" aria-hidden />
@@ -293,7 +293,7 @@ export function Searcher() {
                 autoComplete="off"
               />
             </div>
-            <p className="mt-1 text-sm text-muted">Puede escribir con o sin tildes. Quispicanchi no es lo mismo que Paucartambo.</p>
+            <p className="mt-1 text-sm text-muted">La búsqueda mira el nombre de la región, de la provincia o del distrito, y también alcalde u organización. Cada resultado queda en su nivel. Quispicanchi no es lo mismo que Paucartambo.</p>
           </div>
           <div>
             <label htmlFor="departamento" className="mb-1 block text-sm font-semibold">Departamento</label>
