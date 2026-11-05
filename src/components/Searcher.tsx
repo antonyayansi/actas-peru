@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { MetricaDepartamento } from "@/lib/mapa-metricas";
 
+import { catalogoVisible, consultar, type IndiceEstatico } from "@/lib/estatico";
 import { fechaCorta, miles } from "@/lib/text";
 import type { Autoridad, FuentePublicacion, ResumenTipo } from "@/lib/types";
 
@@ -184,13 +185,25 @@ export function Searcher() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [indice, setIndice] = useState<IndiceEstatico | null>(null);
+  const estatico = process.env.NEXT_PUBLIC_ESTATICO === "1";
 
   useEffect(() => {
+    if (estatico) {
+      fetch("/datos/indice.json")
+        .then((response) => response.json())
+        .then((payload: IndiceEstatico) => {
+          setIndice(payload);
+          setCatalogo(catalogoVisible(payload.catalog));
+        })
+        .catch(() => setError("No se pudo cargar el índice publicado."));
+      return;
+    }
     fetch("/api/catalogo")
       .then((response) => response.json())
       .then(setCatalogo)
       .catch(() => setError("No se pudo cargar el catálogo territorial."));
-  }, []);
+  }, [estatico]);
 
   useEffect(() => {
     const handle = setTimeout(() => setQ(draft), 280);
@@ -207,6 +220,22 @@ export function Searcher() {
     if (estado !== "todos") params.set("estado", estado);
     params.set("pagina", String(pagina));
     params.set("paginaProvincial", String(paginaProvincial));
+    if (estatico) {
+      if (!indice) return;
+      setData(consultar(indice, {
+        q,
+        departamento,
+        provincia,
+        distrito,
+        tipo,
+        estado,
+        pagina,
+        paginaProvincial,
+      }));
+      setError(null);
+      setCargando(false);
+      return;
+    }
     const controller = new AbortController();
     setCargando(true);
     fetch(`/api/buscar?${params.toString()}`, { signal: controller.signal })
@@ -221,7 +250,7 @@ export function Searcher() {
       })
       .finally(() => setCargando(false));
     return () => controller.abort();
-  }, [q, departamento, provincia, distrito, tipo, estado, pagina, paginaProvincial, revision]);
+  }, [q, departamento, provincia, distrito, tipo, estado, pagina, paginaProvincial, revision, estatico, indice]);
 
   useEffect(() => {
     const ingestion = data?.ingestion;
@@ -408,6 +437,16 @@ export function Searcher() {
             onClick={() => {
               setQ(draft);
               setRevision((current) => current + 1);
+              if (estatico) {
+                fetch(`/datos/indice.json?t=${Date.now()}`)
+                  .then((response) => response.json())
+                  .then((payload: IndiceEstatico) => {
+                    setIndice(payload);
+                    setCatalogo(catalogoVisible(payload.catalog));
+                  })
+                  .catch(() => setError("No se pudo actualizar el índice publicado."));
+                return;
+              }
               fetch("/api/catalogo")
                 .then((response) => response.json())
                 .then(setCatalogo)

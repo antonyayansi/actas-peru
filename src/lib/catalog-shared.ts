@@ -1,0 +1,46 @@
+import type { Catalog, RawDistrito } from "./types";
+
+export const SUPLEMENTOS: RawDistrito[] = [
+  {
+    ubigeo: null,
+    departamento: "LORETO",
+    provincia: "MARISCAL RAMON CASTILLA",
+    distrito: "SANTA ROSA DE LORETO",
+    esCapitalProvincial: false,
+    suplemento: true,
+    nota: "Creado por Ley N.° 32403, publicada el 3 de julio de 2025. La ONPE informó que elige alcalde distrital en las ERM 2026. El archivo INEI de ubigeos usado (2022, 1 891 distritos) no lo trae, así que no se le asigna código.",
+  },
+];
+
+export const DENOMINADOR = {
+  regional: 25,
+  provincial: 196,
+  distrital: 1696,
+  fuentes: [
+    {
+      nombre: "JNE, INFOgob Serie ERM 2026, Reporte N.° 1",
+      detalle: "25 gobiernos regionales, 196 municipios provinciales y 1 696 municipios distritales.",
+      url: "https://cdn.www.gob.pe/uploads/document/file/10282706/8355445-elecciones-regionales-y-municipales-2026-resultados-de-las-elecciones-primarias-y-sus-modalidades.pdf",
+    },
+    {
+      nombre: "ONPE, 4 de octubre de 2026",
+      detalle: "25 gobernadores, 196 alcaldes provinciales y 1 696 alcaldes distritales. Menciona 1 892 distritos, incluidos Alto Trujillo y Santa Rosa de Loreto.",
+      url: "https://www.gob.pe/institucion/onpe/noticias/1452513-onpe-mas-de-26-millones-de-ciudadanos-eligen-hoy-sus-autoridades-regionales-y-municipales",
+    },
+    {
+      nombre: "INEI, Directorio nacional de municipalidades 2026",
+      detalle: "196 municipalidades provinciales y 1 696 distritales. Las personas listadas allí son autoridades vigentes al 13 de marzo de 2026, no las electas en octubre. Solo se usa el conteo. No entran las 3 085 municipalidades de centros poblados.",
+      url: "https://cdn.www.gob.pe/uploads/document/file/9866441/8058591-directorio-nacional-de-gobiernos-regionales-municipalidades-provinciales-distritales-y-de-centros-poblados-2026.pdf",
+    },
+  ],
+} as const;
+
+export function catalogoAlineado(catalog: Catalog): boolean {
+  const distritales = catalog.distritos.filter((item) => !item.esCapitalProvincial).length;
+  return (
+    catalog.departamentos.length === DENOMINADOR.regional &&
+    catalog.provincias.length === DENOMINADOR.provincial &&
+    distritales === DENOMINADOR.distrital &&
+    catalog.advertencias.length === 0
+  );
+}

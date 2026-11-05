@@ -51,14 +51,15 @@ La primera pasada nacional de PDF puede durar más que esos 30 minutos. Recién 
 
 ## Despliegue
 
-Origin guarda el código. No publica la web. Este repositorio no contrata hosting ni crea cuentas.
-
-Para una URL pública por la ruta documentada hace falta que la titular conecte el repo Origin a Vercel (Vercel for Origin, planes Pro o Enterprise; un equipo Hobby no despliega repos Origin) e importe el proyecto. Otra ruta documentada es publicar desde Cursor Apps: la publicación la confirma la titular y Cursor crea la cuenta de hosting. Ninguna de las dos mantiene por sí sola el indexador residente ni el disco de `data/`. La lectura cada 30 minutos necesita un proceso Node 22 que no se suspenda y disco persistente:
+cPanel solo sirve archivos estáticos. Este buscador es Next.js: la consulta y la lectura de actas corren en Node. El lugar para publicarlo es un VPS.
 
 ```bash
 npm install
+npm test
 npm run build
 npm run serve:prod
 ```
 
-Si ese proceso se apaga, la actualización se detiene. Un vistazo estático del código no sigue leyendo al JNE.
+El sitio escucha en el puerto 43123. El indexador vuelve a leer el listado público cada 30 minutos y guarda el índice en `data/`. Ese proceso tiene que seguir encendido y el disco de `data/` tiene que persistir. Si se apaga, no se pierden las actas ya leídas, pero deja de incorporar las nuevas.
+
+`node scripts/build-dist.mjs` arma además una copia estática en `dist/`, con el índice congelado dentro de `datos/indice.json`. Sirve para un hosting que solo acepta HTML. Esa copia no actualiza el listado.

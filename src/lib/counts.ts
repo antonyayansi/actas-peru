@@ -1,4 +1,4 @@
-import { catalogoAlineado, DENOMINADOR } from "./catalog";
+import { catalogoAlineado, DENOMINADOR } from "./catalog-shared";
 import { bloqueaCierre } from "./corpus";
 import { miles, porcentajeTexto } from "./text";
 import type { Ambito, Catalog, Corpus, Documento, Filtro, Resumen, ResumenTipo } from "./types";
