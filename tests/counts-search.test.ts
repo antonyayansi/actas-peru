@@ -119,6 +119,30 @@ test("sin datos válidos el resumen no finge ceros", () => {
   assert.match(resumen.textos.join(" "), /no se muestran ceros/i);
 });
 
+test("una fila distrital futura no se cuela en gobiernos regionales ni provinciales", () => {
+  const corpus = corpusDe(
+    [
+      fila({
+        idProclamacion: 1656,
+        txJEE: "JEE ESPINAR",
+        tipoEleccion: "MUNICIPAL DISTRITAL",
+        fechaHora: "20/11/2026 10:00:00 AM",
+        actaProclamacion: "",
+      }),
+    ],
+    {},
+    now,
+  );
+  const regional = buscar(catalog, corpus, { q: "espinar", tipo: "regional" });
+  assert.equal(regional.resultados.some((item) => item.jee === "JEE ESPINAR"), false);
+  const provincial = buscar(catalog, corpus, { q: "espinar", tipo: "provincial" });
+  assert.equal(provincial.resultados.some((item) => item.estado === "programada_sin_acta"), false);
+  const distrital = buscar(catalog, corpus, { q: "espinar", tipo: "distrital" });
+  const filaDistrital = distrital.resultados.find((item) => item.jee === "JEE ESPINAR");
+  assert.ok(filaDistrital);
+  assert.equal(filaDistrital.estado, "programada_sin_acta");
+});
+
 test("la búsqueda ignora tildes y no mueve Challabamba a Quispicanchi", () => {
   const corpus = corpusChallabamba(false);
   const porTilde = buscar(catalog, corpus, { q: "Chállabamba" });

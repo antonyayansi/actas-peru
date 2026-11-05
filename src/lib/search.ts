@@ -1,6 +1,7 @@
 import { resumir } from "./counts";
 import { matchesQuery, titleCase } from "./text";
 import type {
+  Ambito,
   AmbitoIndexado,
   Catalog,
   Corpus,
@@ -155,6 +156,24 @@ function resultadoEvento(doc: Documento): Resultado {
   };
 }
 
+function nivelDocumento(doc: Documento): Ambito | null {
+  if (
+    doc.ambito === "regional" ||
+    doc.ambito === "regional_parcial" ||
+    doc.clase === "computo_regional_descentralizado" ||
+    doc.clase === "autoridades_regionales"
+  ) {
+    return "regional";
+  }
+  if (doc.ambito === "provincial" || doc.clase === "autoridades_provinciales") return "provincial";
+  if (doc.ambito === "distrital" || doc.clase === "autoridades_distritales") return "distrital";
+  const tipo = doc.tipoListado.toUpperCase();
+  if (tipo.includes("REGIONAL")) return "regional";
+  if (tipo.includes("PROVINCIAL")) return "provincial";
+  if (tipo.includes("DISTRITAL")) return "distrital";
+  return null;
+}
+
 function quiereLugaresVacios(filtro: Filtro): boolean {
   if (filtro.estado === "con_acta" || filtro.estado === "pendiente") return false;
   return Boolean(filtro.q || filtro.departamento || filtro.provincia || filtro.distrito || filtro.estado === "sin_acta");
@@ -285,6 +304,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
       if (filtro.estado === "con_acta" && doc.estado !== "acta_publicada") continue;
       if (filtro.estado === "sin_acta") continue;
       if (!parcial && !pendiente && doc.estado !== "programada_sin_acta" && doc.estado !== "sin_acta_en_fila") continue;
+      if (filtro.tipo && filtro.tipo !== "todos" && nivelDocumento(doc) !== filtro.tipo) continue;
       if (filtro.departamento && doc.departamentoCodigo && doc.departamentoCodigo !== filtro.departamento) continue;
       if (filtro.departamento && !doc.departamentoCodigo && filtro.estado !== "pendiente") continue;
       if (filtro.provincia && doc.provinciaCodigo && doc.provinciaCodigo !== filtro.provincia && !parcial) continue;
