@@ -40,12 +40,12 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
         </h2>
         <p className="text-right text-xs text-muted">25 contornos. Lima y Callao van separados.</p>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_11rem]">
+      <div className="grid items-center gap-3 lg:grid-cols-[minmax(0,1fr)_11.5rem]">
         <svg
           viewBox={MAPA_VIEWBOX}
           role="group"
           aria-labelledby="mapa"
-          className="h-auto w-full bg-white"
+          className="map-svg bg-white"
         >
           {DEPARTAMENTOS_MAPA.map((dep) => {
             const nombre = porCodigo.get(dep.codigo)?.nombre ?? dep.nombreFuente;
@@ -118,8 +118,13 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
           ? `${miles(revisionSinTerritorio)} PDF siguen en revisión o sin territorio. No se pintan como ausencia ni entran en el departamento.`
           : "No hay PDF en revisión sin territorio."}
         {" "}Los contornos son departamentos de {FUENTE_MAPA.anioRepresentado}, no municipalidades. Callao no es parte de Lima.
-        Fuente: {FUENTE_MAPA.proyecto}. Capa {FUENTE_MAPA.licenciaCapa} Origen declarado: {FUENTE_MAPA.fuenteOriginal}, {FUENTE_MAPA.licenciaOriginal}. {FUENTE_MAPA.ajuste}
       </p>
+      <details className="mt-1 text-xs leading-5 text-muted">
+        <summary className="cursor-pointer font-semibold text-petrol">Fuente y licencia del mapa</summary>
+        <p className="mt-1">
+          Fuente: {FUENTE_MAPA.proyecto}. Capa {FUENTE_MAPA.licenciaCapa} Origen declarado: {FUENTE_MAPA.fuenteOriginal}, {FUENTE_MAPA.licenciaOriginal}. {FUENTE_MAPA.ajuste}
+        </p>
+      </details>
     </div>
   );
 }

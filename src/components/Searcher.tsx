@@ -147,10 +147,10 @@ function CabeceraAvance({ tipo }: { tipo: ResumenTipo | undefined }) {
     <div className="mt-2">
       <div className="flex items-end justify-between gap-3">
         <p className="leading-none">
-          <span className="font-condensed text-4xl font-bold text-gold">{miles(avance.ubicadas)}</span>
+          <span className="font-condensed text-3xl font-bold text-gold sm:text-4xl">{miles(avance.ubicadas)}</span>
           <span className="ml-1 text-sm text-white">de {miles(avance.esperados)}</span>
         </p>
-        <p className="font-condensed text-4xl font-bold leading-none text-gold">{avance.texto}</p>
+        <p className="font-condensed text-3xl font-bold leading-none text-gold sm:text-4xl">{avance.texto}</p>
       </div>
       <div
         className="mt-2 h-2 overflow-hidden bg-white/25"
@@ -259,14 +259,14 @@ export function Searcher() {
               : null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:items-start">
+    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(300px,540px)_minmax(0,1fr)] lg:items-start [&>*]:min-w-0">
       <section className="order-1 space-y-4 lg:col-start-2 lg:row-start-1" aria-labelledby="consulta">
       <div className="flex items-center gap-3">
         <span className="mark" aria-hidden="true">1</span>
         <h2 id="consulta" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Consulta</h2>
       </div>
       <form
-        className="panel p-4 sm:p-6"
+        className="panel p-3 sm:p-4"
         onSubmit={(event) => {
           event.preventDefault();
           setQ(draft);
@@ -289,7 +289,7 @@ export function Searcher() {
                   setPagina(1);
                 setPaginaProvincial(1);
                 }}
-                placeholder="Ej. Challabamba, Sullana, Acción Popular"
+                placeholder="Challabamba, Sullana…"
                 autoComplete="off"
               />
             </div>
@@ -435,7 +435,7 @@ export function Searcher() {
         <p role="status" className="panel px-4 py-3 text-sm">{data.mensaje}</p>
       )}
 
-      <div className="order-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
+      <div className="order-2 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
         <MapaPeru
           seleccionado={departamento}
           metricas={data?.porDepartamento ?? []}
@@ -463,16 +463,16 @@ export function Searcher() {
               const avance = avanceDe(tipo);
               return (
                 <article key={tipo.ambito} className="border-b border-line px-3 py-2 last:border-b-0">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">{tipo.etiqueta}</p>
-                    <p className="shrink-0 text-right">
-                      <span className="font-condensed text-3xl font-bold leading-none text-petrol">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="min-w-0 font-condensed text-sm font-semibold uppercase leading-tight tracking-wide text-petrol">{tipo.etiqueta}</p>
+                    <p className="shrink-0 whitespace-nowrap text-right leading-none">
+                      <span className="font-condensed text-2xl font-bold text-petrol sm:text-3xl">
                         {tipo.conActa === null ? "—" : miles(tipo.conActa)}
                       </span>
                       <span className="ml-1 text-sm text-muted">
                         de {tipo.esperados === null ? "pendiente" : miles(tipo.esperados)}
                       </span>
-                      {avance && <span className="block font-condensed text-lg font-bold leading-none text-petrol">{avance.texto}</span>}
+                      {avance && <span className="ml-2 font-condensed text-xl font-bold text-petrol">{avance.texto}</span>}
                     </p>
                   </div>
                   {avance && (
@@ -566,7 +566,7 @@ export function Searcher() {
               : ""}
           </p>
         )}
-        <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="grid min-w-0 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
           {(data?.grupos || []).map((grupo) => (
             <section key={grupo.ambito} aria-labelledby={`grupo-${grupo.ambito}`} className="min-w-0 border border-line bg-white">
               <div className="border-b-4 border-gold bg-petrol px-3 py-3 text-white">
@@ -578,13 +578,13 @@ export function Searcher() {
               ) : (
                 <ol className="space-y-3 p-3">
                   {grupo.resultados.map((item) => (
-                    <li key={item.id} className="border border-line border-t-4 border-t-gold bg-white p-3">
+                    <li key={item.id} className="break-words border border-line border-t-4 border-t-gold bg-white p-3">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-petrol">
                             {item.ambito ? AMBITO[item.ambito] || item.ambito : "Evento del listado"}
                           </p>
-                          <h4 className="font-condensed text-2xl font-bold leading-none text-ink">{item.titulo}</h4>
+                          <h4 className="break-words font-condensed text-xl font-bold leading-none text-ink">{item.titulo}</h4>
                           <p className="mt-1 text-sm text-muted">{item.lugar}</p>
                         </div>
                         <Badge tone={toneFor(item.estado)}>{item.estadoEtiqueta}</Badge>

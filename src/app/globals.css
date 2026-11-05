@@ -17,12 +17,23 @@ html {
   color-scheme: light;
   scroll-behavior: smooth;
   background: #ffffff;
+  overflow-x: clip;
 }
 
 body {
   background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
+  overflow-x: clip;
+}
+
+.map-svg {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(58vh, 520px);
+  margin-inline: auto;
 }
 
 @media (prefers-color-scheme: dark) {
