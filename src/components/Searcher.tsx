@@ -112,6 +112,52 @@ function toneFor(estado: string): "ok" | "wait" | "miss" | "info" {
   return "wait";
 }
 
+function porcentajeBonito(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  const cuerpo = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1).replace(".", ",");
+  return `${cuerpo} %`;
+}
+
+function avanceDe(tipo: ResumenTipo | undefined): { ubicadas: number; esperados: number; porcentaje: number; texto: string } | null {
+  if (!tipo || tipo.conActa === null || tipo.esperados === null || tipo.esperados <= 0) return null;
+  const porcentaje = (tipo.conActa / tipo.esperados) * 100;
+  return { ubicadas: tipo.conActa, esperados: tipo.esperados, porcentaje, texto: porcentajeBonito(porcentaje) };
+}
+
+function CabeceraAvance({ tipo }: { tipo: ResumenTipo | undefined }) {
+  const avance = avanceDe(tipo);
+  if (!tipo || tipo.esperados === null || tipo.conActa === null) {
+    return <p className="mt-1 text-sm text-white">Total pendiente de verificar.</p>;
+  }
+  if (!avance) {
+    return <p className="mt-1 text-sm text-white">No corresponde a este recorte.</p>;
+  }
+  const ancho = Math.max(0, Math.min(100, avance.porcentaje));
+  return (
+    <div className="mt-2">
+      <div className="flex items-end justify-between gap-3">
+        <p className="leading-none">
+          <span className="font-condensed text-4xl font-bold text-gold">{miles(avance.ubicadas)}</span>
+          <span className="ml-1 text-sm text-white">de {miles(avance.esperados)}</span>
+        </p>
+        <p className="font-condensed text-4xl font-bold leading-none text-gold">{avance.texto}</p>
+      </div>
+      <div
+        className="mt-2 h-2 overflow-hidden bg-white/25"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(ancho)}
+        aria-valuetext={`${miles(avance.ubicadas)} de ${miles(avance.esperados)} con acta ubicada, ${avance.texto}`}
+        aria-label="Actas ubicadas sobre el catálogo de este recorte"
+      >
+        <div className="h-full bg-gold" style={{ width: `${ancho}%` }} />
+      </div>
+      <p className="mt-1 text-xs text-white">con acta ubicada</p>
+    </div>
+  );
+}
+
 export function Searcher() {
   const [catalogo, setCatalogo] = useState<Catalogo | null>(null);
   const [q, setQ] = useState("");
@@ -389,23 +435,34 @@ export function Searcher() {
         </div>
         {!resumen?.datosValidos && data?.listo === false ? null : (
           <div className="overflow-hidden border border-line bg-white">
-            {(resumen?.tipos || []).filter((tipo) => tipo.esperados !== 0).map((tipo) => (
-              <article key={tipo.ambito} className="flex items-center justify-between gap-3 border-b border-line px-3 py-2 last:border-b-0">
-                <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">{tipo.etiqueta}</p>
-                <p className="shrink-0 text-right">
-                  <span className="font-condensed text-3xl font-bold leading-none text-petrol">
-                    {tipo.conActa === null ? "—" : miles(tipo.conActa)}
-                  </span>
-                  <span className="ml-1 text-sm text-muted">
-                    de {tipo.esperados === null ? "pendiente" : miles(tipo.esperados)}
-                  </span>
-                </p>
-              </article>
-            ))}
+            {(resumen?.tipos || []).filter((tipo) => tipo.esperados !== 0).map((tipo) => {
+              const avance = avanceDe(tipo);
+              return (
+                <article key={tipo.ambito} className="border-b border-line px-3 py-2 last:border-b-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">{tipo.etiqueta}</p>
+                    <p className="shrink-0 text-right">
+                      <span className="font-condensed text-3xl font-bold leading-none text-petrol">
+                        {tipo.conActa === null ? "—" : miles(tipo.conActa)}
+                      </span>
+                      <span className="ml-1 text-sm text-muted">
+                        de {tipo.esperados === null ? "pendiente" : miles(tipo.esperados)}
+                      </span>
+                      {avance && <span className="block font-condensed text-lg font-bold leading-none text-petrol">{avance.texto}</span>}
+                    </p>
+                  </div>
+                  {avance && (
+                    <div className="mt-1 h-1.5 overflow-hidden bg-ice" aria-hidden="true">
+                      <div className="h-full bg-gold" style={{ width: `${Math.max(0, Math.min(100, avance.porcentaje))}%` }} />
+                    </div>
+                  )}
+                </article>
+              );
+            })}
             <p className="border-t-4 border-gold bg-ice px-3 py-2 text-sm leading-5 text-ink">
               {resumen?.cierre
                 ? "Sin publicación encontrada no equivale a falta de proclamación."
-                : "Porcentaje no calculado. Sin publicación encontrada: aún no cerrada. No equivale a falta de proclamación."}
+                : "El porcentaje es de actas ya ubicadas sobre el catálogo. La lectura sigue abierta y la cifra puede subir. No afirma que el resto no se haya proclamado."}
             </p>
           </div>
         )}
@@ -469,9 +526,9 @@ export function Searcher() {
         <div className="grid items-start gap-4 lg:grid-cols-3">
           {(data?.grupos || []).map((grupo) => (
             <section key={grupo.ambito} aria-labelledby={`grupo-${grupo.ambito}`} className="min-w-0 border border-line bg-white">
-              <div className="border-b-4 border-gold bg-petrol px-3 py-2 text-white">
+              <div className="border-b-4 border-gold bg-petrol px-3 py-3 text-white">
                 <h3 id={`grupo-${grupo.ambito}`} className="font-condensed text-xl font-bold uppercase tracking-wide">{grupo.titulo}</h3>
-                <p className="text-sm text-white">{miles(grupo.total)} en este recorte</p>
+                <CabeceraAvance tipo={(resumen?.tipos || []).find((tipo) => tipo.ambito === grupo.ambito)} />
               </div>
               {grupo.resultados.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-muted">Ninguno en este recorte.</p>
