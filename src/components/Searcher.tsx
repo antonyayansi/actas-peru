@@ -174,8 +174,13 @@ export function Searcher() {
 
   return (
     <div className="space-y-6">
+      <section className="space-y-4" aria-labelledby="consulta">
+      <div className="flex items-center gap-3">
+        <span className="mark" aria-hidden="true">1</span>
+        <h2 id="consulta" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Consulta</h2>
+      </div>
       <form
-        className="rounded-3xl border border-line bg-card p-4 shadow-[0_12px_40px_rgba(28,40,36,0.05)] sm:p-6"
+        className="panel p-4 sm:p-6"
         onSubmit={(event) => {
           event.preventDefault();
           setQ(draft);
@@ -188,7 +193,7 @@ export function Searcher() {
               Buscar lugar, alcalde u organización
             </label>
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-lagoon" aria-hidden />
+              <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-petrol" aria-hidden />
               <input
                 id="q"
                 className="field pl-10"
@@ -201,7 +206,7 @@ export function Searcher() {
                 autoComplete="off"
               />
             </div>
-            <p className="mt-1 text-sm text-ink/70">Puede escribir con o sin tildes. Quispicanchi no es lo mismo que Paucartambo.</p>
+            <p className="mt-1 text-sm text-muted">Puede escribir con o sin tildes. Quispicanchi no es lo mismo que Paucartambo.</p>
           </div>
           <div>
             <label htmlFor="departamento" className="mb-1 block text-sm font-semibold">Departamento</label>
@@ -304,60 +309,73 @@ export function Searcher() {
           </Button>
         </div>
       </form>
+      </section>
 
       {error && (
-        <p role="alert" className="rounded-2xl border border-clay/30 bg-[#f8ece7] px-4 py-3 text-sm">
+        <p role="alert" className="border border-[#e7b2a8] border-l-4 border-l-[#7a2e22] bg-white px-4 py-3 text-sm">
           <AlertTriangle className="mr-2 inline size-4" aria-hidden />
           {error}
         </p>
       )}
       {data?.aviso && (
-        <p role="status" className="rounded-2xl border border-[#e2c98a] bg-[#fbf6ea] px-4 py-3 text-sm">
+        <p role="status" className="border border-gold border-l-4 bg-white px-4 py-3 text-sm">
           {data.aviso}
         </p>
       )}
       {data && !data.listo && (
-        <p role="status" className="rounded-2xl bg-card px-4 py-3 text-sm">{data.mensaje}</p>
+        <p role="status" className="panel px-4 py-3 text-sm">{data.mensaje}</p>
       )}
 
-      <section aria-live="polite" className="space-y-3">
+      <section aria-live="polite" aria-labelledby="resumen" className="space-y-4">
         <div className="flex items-end justify-between gap-3">
-          <h2 className="font-serif text-2xl">Del total, cuánto ya se ubicó</h2>
-          {cargando && <span className="text-sm text-ink/60">Actualizando…</span>}
+          <div className="flex items-center gap-3">
+            <span className="mark" aria-hidden="true">2</span>
+            <h2 id="resumen" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Del total, cuánto ya se ubicó</h2>
+          </div>
+          {cargando && <span className="text-sm text-muted">Actualizando…</span>}
         </div>
         {!resumen?.datosValidos && data?.listo === false ? null : (
           <div className="grid gap-3 sm:grid-cols-3">
             {(resumen?.tipos || []).filter((tipo) => tipo.esperados !== 0).map((tipo) => (
-              <article key={tipo.ambito} className="rounded-3xl border border-line bg-card p-4">
-                <p className="text-sm capitalize text-ink/70">{tipo.etiqueta}</p>
-                <p className="mt-2 font-serif text-3xl">
-                  {tipo.conActa === null ? "—" : miles(tipo.conActa)}
-                  <span className="text-lg text-ink/50"> / {tipo.esperados === null ? "pendiente" : miles(tipo.esperados)}</span>
-                </p>
-                <p className="mt-2 text-sm">
-                  {tipo.porcentaje === null
-                    ? "Porcentaje no calculado"
-                    : porcentajeTexto(tipo.porcentaje)}
-                </p>
-                <p className="mt-1 text-sm text-ink/70">
-                  {tipo.sinPublicacionEncontrada === null
-                    ? "Sin publicación encontrada: aún no cerrada"
-                    : `Sin publicación encontrada: ${miles(tipo.sinPublicacionEncontrada)}`}
-                </p>
+              <article key={tipo.ambito} className="overflow-hidden border border-line bg-white">
+                <div className="bg-petrol px-4 py-4 text-white">
+                  <p className="font-condensed text-sm font-semibold uppercase tracking-wide">{tipo.etiqueta}</p>
+                  <p className="mt-1 font-condensed text-6xl font-bold leading-none text-gold">
+                    {tipo.conActa === null ? "—" : miles(tipo.conActa)}
+                  </p>
+                  <p className="mt-1 text-sm text-white">
+                    de {tipo.esperados === null ? "total pendiente" : miles(tipo.esperados)}
+                  </p>
+                </div>
+                <div className="border-t-4 border-gold px-4 py-3">
+                  <p className="text-sm font-semibold text-petrol">
+                    {tipo.porcentaje === null
+                      ? "Porcentaje no calculado"
+                      : porcentajeTexto(tipo.porcentaje)}
+                  </p>
+                  <p className="mt-1 text-sm text-muted">
+                    {tipo.sinPublicacionEncontrada === null
+                      ? "Sin publicación encontrada: aún no cerrada. No equivale a falta de proclamación."
+                      : `Sin publicación encontrada: ${miles(tipo.sinPublicacionEncontrada)}. No equivale a falta de proclamación.`}
+                  </p>
+                </div>
               </article>
             ))}
           </div>
         )}
-        <div className="space-y-2 text-sm leading-6 text-ink/80">
+        <div className="space-y-2 text-sm leading-6 text-ink">
           {resumen?.textos.map((linea) => (
             <p key={linea}>{linea}</p>
           ))}
         </div>
       </section>
 
-      <section className="rounded-3xl border border-line bg-card p-4 sm:p-5">
-        <h2 className="font-serif text-xl">Salud de la ingestión</h2>
-        <p className="mt-1 text-sm text-ink/70">
+      <section className="panel p-4 sm:p-5" aria-labelledby="avance">
+        <div className="flex items-center gap-3">
+          <span className="mark" aria-hidden="true">3</span>
+          <h2 id="avance" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Salud de la ingestión</h2>
+        </div>
+        <p className="mt-3 text-sm text-muted">
           Esto mide la lectura del listado y de los PDF. No es el porcentaje de proclamaciones del país.
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -368,13 +386,13 @@ export function Searcher() {
             </div>
             <progress value={ingestion ? pdfHechos : 0} max={pdfMax} aria-label="Avance de lectura de PDF" />
           </div>
-          <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-ink/60">Filas del listado</dt><dd className="font-semibold">{ingestion ? miles(ingestion.filas) : "—"}</dd></div>
-            <div><dt className="text-ink/60">Declaradas por la fuente</dt><dd className="font-semibold">{ingestion?.declaredTotal ? miles(ingestion.declaredTotal) : "—"}</dd></div>
-            <div><dt className="text-ink/60">Con territorio</dt><dd className="font-semibold">{ingestion ? miles(ingestion.pdfOk) : "—"}</dd></div>
-            <div><dt className="text-ink/60">En revisión</dt><dd className="font-semibold">{ingestion ? miles(ingestion.pdfRevision) : "—"}</dd></div>
-            <div><dt className="text-ink/60">Error de PDF</dt><dd className="font-semibold">{ingestion ? miles(ingestion.pdfError) : "—"}</dd></div>
-            <div><dt className="text-ink/60">Sin descargar</dt><dd className="font-semibold">{ingestion ? miles(ingestion.pdfSinDescargar) : "—"}</dd></div>
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+            <div><dt className="text-muted">Filas del listado</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.filas) : "—"}</dd></div>
+            <div><dt className="text-muted">Declaradas por la fuente</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion?.declaredTotal ? miles(ingestion.declaredTotal) : "—"}</dd></div>
+            <div><dt className="text-muted">Con territorio</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfOk) : "—"}</dd></div>
+            <div><dt className="text-muted">En revisión</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfRevision) : "—"}</dd></div>
+            <div><dt className="text-muted">Error de PDF</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfError) : "—"}</dd></div>
+            <div><dt className="text-muted">Sin descargar</dt><dd className="font-condensed text-2xl font-bold text-petrol">{ingestion ? miles(ingestion.pdfSinDescargar) : "—"}</dd></div>
           </dl>
         </div>
         <p className="mt-3 text-sm">
@@ -383,16 +401,19 @@ export function Searcher() {
           {ingestion?.trabajando ? " La lectura sigue en este momento." : ""}
           {ingestion?.ultimoAvanceLabel ? ` Último avance: ${ingestion.ultimoAvanceLabel}.` : ""}
         </p>
-        {ingestion?.listingError && <p className="mt-2 text-sm text-clay">{ingestion.listingError}</p>}
+        {ingestion?.listingError && <p className="mt-2 text-sm text-[#7a2e22]">{ingestion.listingError}</p>}
       </section>
 
-      <section className="space-y-3">
-        <div className="flex items-baseline justify-between">
-          <h2 className="font-serif text-2xl">Resultados</h2>
-          <p className="text-sm text-ink/70">{data?.total === undefined ? "" : `${miles(data.total)} coincidencias`}</p>
+      <section className="space-y-4" aria-labelledby="resultados">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="mark" aria-hidden="true">4</span>
+            <h2 id="resultados" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Resultados</h2>
+          </div>
+          <p className="text-sm text-muted">{data?.total === undefined ? "" : `${miles(data.total)} coincidencias`}</p>
         </div>
         {data?.listo && data.total === 0 && (
-          <p className="rounded-2xl bg-card px-4 py-5 text-sm leading-6">
+          <p className="panel px-4 py-5 text-sm leading-6">
             Ningún ámbito coincide con esa búsqueda.
             {ingestion && ingestion.pdfSinDescargar > 0
               ? " Si el lugar ya tiene acta, puede aparecer cuando termine de leerse su PDF. Mientras tanto puede buscar por el nombre del jurado."
@@ -401,43 +422,43 @@ export function Searcher() {
         )}
         <ol className="space-y-3">
           {(data?.resultados || []).map((item) => (
-            <li key={item.id} className="rounded-3xl border border-line bg-card p-4 sm:p-5">
+            <li key={item.id} className="border border-line border-t-4 border-t-gold bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-lagoon">
+                  <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">
                     {item.ambito ? AMBITO[item.ambito] || item.ambito : "Evento del listado"}
                   </p>
-                  <h3 className="font-serif text-2xl">{item.titulo}</h3>
-                  <p className="text-sm text-ink/75">{item.lugar}</p>
+                  <h3 className="font-condensed text-4xl font-bold leading-none text-ink">{item.titulo}</h3>
+                  <p className="mt-1 text-sm text-muted">{item.lugar}</p>
                 </div>
                 <Badge tone={toneFor(item.estado)}>{item.estadoEtiqueta}</Badge>
               </div>
               <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                 {item.autoridad && (
                   <div>
-                    <dt className="text-ink/60">{item.autoridad.cargo}</dt>
+                    <dt className="text-muted">{item.autoridad.cargo}</dt>
                     <dd className="font-semibold">{item.autoridad.nombre}</dd>
                     {item.autoridad.organizacion && <dd>{item.autoridad.organizacion}</dd>}
                   </div>
                 )}
                 <div>
-                  <dt className="text-ink/60">Fecha del acta</dt>
+                  <dt className="text-muted">Fecha del acta</dt>
                   <dd>{fechaCorta(item.fechaActa) || "No leída"}</dd>
                 </div>
                 {item.jee && (
                   <div>
-                    <dt className="text-ink/60">Jurado que publica</dt>
+                    <dt className="text-muted">Jurado que publica</dt>
                     <dd>{item.jee}</dd>
                   </div>
                 )}
                 {item.fechaListadoEsFutura && (
                   <div>
-                    <dt className="text-ink/60">Fecha en el listado</dt>
+                    <dt className="text-muted">Fecha en el listado</dt>
                     <dd>Posterior a hoy. No confirma la proclamación.</dd>
                   </div>
                 )}
               </dl>
-              {item.nota && <p className="mt-3 text-sm leading-6 text-ink/80">{item.nota}</p>}
+              {item.nota && <p className="mt-3 text-sm leading-6 text-ink">{item.nota}</p>}
               <div className="mt-4 flex flex-wrap gap-2">
                 {item.pdfUrl && (
                   <Button asChild>
@@ -454,7 +475,7 @@ export function Searcher() {
                 )}
               </div>
               {item.fuentes.length > 0 && (
-                <p className="mt-3 text-xs text-ink/55">
+                <p className="mt-3 text-xs text-muted">
                   Fuente: listado público de proclamación ERM 2026, fila {item.fuentes.map((fuente) => fuente.idProclamacion).join(", ")}.
                 </p>
               )}
@@ -474,8 +495,8 @@ export function Searcher() {
         )}
       </section>
 
-      <section id="fuentes" className="space-y-3 text-sm leading-6">
-        <h2 className="font-serif text-2xl">Fuentes y reglas</h2>
+      <section id="fuentes" className="space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6">
+        <h2 className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Fuentes y reglas</h2>
         <p>
           El listado sale del cuadro público de proclamación ERM 2026. Cada fila es un evento de un jurado electoral especial, no una municipalidad. El territorio se lee del PDF. Por eso Challabamba, Caicay, Colquepata y Huancarani, en la provincia de Paucartambo, Cusco, pueden figurar bajo el JEE Quispicanchi.
         </p>
@@ -485,7 +506,7 @@ export function Searcher() {
         <ul className="list-disc space-y-2 pl-5">
           {catalogo?.denominador.fuentes.map((fuente) => (
             <li key={fuente.nombre}>
-              <a className="font-semibold text-lagoon underline-offset-2 hover:underline" href={fuente.url}>{fuente.nombre}</a>
+              <a className="font-semibold text-petrol underline decoration-gold underline-offset-2 hover:decoration-2" href={fuente.url}>{fuente.nombre}</a>
               {". "}{fuente.detalle}
             </li>
           ))}

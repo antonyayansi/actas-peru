@@ -2,62 +2,94 @@
 
 @theme {
   --font-sans: var(--font-source), "Source Sans 3", "Segoe UI", sans-serif;
-  --font-serif: var(--font-fraunces), Georgia, serif;
-  --color-paper: #f3efe6;
-  --color-ink: #1c2824;
-  --color-lagoon: #0e5c54;
-  --color-lagoon-dark: #0a3f3a;
-  --color-clay: #8c4630;
-  --color-line: #e3d8c8;
-  --color-card: #fffdf8;
-  --color-moss: #2c6b4e;
+  --font-condensed: var(--font-condensed), "Barlow Condensed", "Arial Narrow", sans-serif;
+  --color-petrol: #00628a;
+  --color-petrol-dark: #004a69;
+  --color-gold: #ffbe00;
+  --color-ink: #243038;
+  --color-muted: #5c6770;
+  --color-line: #d5dee4;
+  --color-ice: #e7f4f8;
+  --color-card: #ffffff;
 }
 
 html {
+  color-scheme: light;
   scroll-behavior: smooth;
+  background: #ffffff;
 }
 
 body {
-  background:
-    radial-gradient(1200px 400px at 10% -10%, rgba(14, 92, 84, 0.08), transparent 50%),
-    var(--color-paper);
+  background: #ffffff;
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
 
+@media (prefers-color-scheme: dark) {
+  html,
+  body {
+    background: #ffffff;
+    color: #243038;
+  }
+}
+
 :focus-visible {
-  outline: 2px solid var(--color-lagoon);
+  outline: 2px solid var(--color-petrol);
   outline-offset: 2px;
 }
 
 .field {
   min-height: 2.75rem;
   width: 100%;
-  border-radius: 0.9rem;
+  border-radius: 0.35rem;
   border: 1px solid var(--color-line);
-  background: var(--color-card);
+  background: #ffffff;
   padding: 0.55rem 0.8rem;
   font-size: 1rem;
   color: var(--color-ink);
 }
 
+.field:disabled {
+  background: #f4f7f8;
+  color: var(--color-muted);
+}
+
+.panel {
+  border: 1px solid var(--color-line);
+  border-top: 4px solid var(--color-gold);
+  background: #ffffff;
+}
+
+.mark {
+  display: inline-grid;
+  height: 2.5rem;
+  width: 2.5rem;
+  place-items: center;
+  background: var(--color-petrol);
+  color: var(--color-gold);
+  font-family: var(--font-condensed);
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
 progress {
   width: 100%;
-  height: 0.55rem;
+  height: 0.7rem;
   border: 0;
   border-radius: 999px;
   overflow: hidden;
-  background: #e7dfd2;
+  background: var(--color-ice);
 }
 
 progress::-webkit-progress-bar {
-  background: #e7dfd2;
+  background: var(--color-ice);
 }
 
 progress::-webkit-progress-value {
-  background: var(--color-lagoon);
+  background: var(--color-gold);
 }
 
 progress::-moz-progress-bar {
-  background: var(--color-lagoon);
+  background: var(--color-gold);
 }
