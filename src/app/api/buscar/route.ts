@@ -43,8 +43,34 @@ export function GET(request: NextRequest) {
     estado: (params.get("estado") as Filtro["estado"]) || "todos",
   };
   const pagina = Number(params.get("pagina") || 1);
+  const paginaProvincial = Number(params.get("paginaProvincial") || 1);
   const catalogo = loadCatalog();
   const busqueda = buscar(catalogo, snapshot.corpus, filtro, Number.isFinite(pagina) ? pagina : 1, 20);
+  const tiposVisibles = filtro.tipo && filtro.tipo !== "todos" ? [filtro.tipo] : (["regional", "provincial", "distrital"] as const);
+  const titulos = {
+    regional: "Gobiernos regionales",
+    provincial: "Provinciales",
+    distrital: "Distritales",
+  } as const;
+  const grupos = tiposVisibles.map((ambito) => {
+    const paginaGrupo = ambito === "distrital" ? pagina : ambito === "provincial" ? paginaProvincial : 1;
+    const tamano = ambito === "regional" ? 8 : 6;
+    const encontrado = buscar(
+      catalogo,
+      snapshot.corpus,
+      { ...filtro, tipo: ambito },
+      Number.isFinite(paginaGrupo) ? paginaGrupo : 1,
+      tamano,
+    );
+    return {
+      ambito,
+      titulo: titulos[ambito],
+      resultados: encontrado.resultados,
+      total: encontrado.total,
+      pagina: encontrado.pagina,
+      paginas: encontrado.paginas,
+    };
+  });
   const corpus = snapshot.corpus;
   return NextResponse.json({
     listo: true,
@@ -82,5 +108,6 @@ export function GET(request: NextRequest) {
     denominador: snapshot.denominador,
     ubigeo: snapshot.ubigeo,
     porDepartamento: metricasPorDepartamento(catalogo, snapshot.corpus),
+    grupos,
   });
 }

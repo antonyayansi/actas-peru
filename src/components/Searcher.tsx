@@ -86,6 +86,16 @@ interface Payload {
   aviso?: string | null;
   ubigeo?: { archivo: string; nota: string };
   porDepartamento?: MetricaDepartamento[];
+  grupos?: GrupoResultados[];
+}
+
+interface GrupoResultados {
+  ambito: "regional" | "provincial" | "distrital";
+  titulo: string;
+  resultados: Resultado[];
+  total: number;
+  pagina: number;
+  paginas: number;
 }
 
 const AMBITO: Record<string, string> = {
@@ -112,6 +122,7 @@ export function Searcher() {
   const [tipo, setTipo] = useState("todos");
   const [estado, setEstado] = useState("todos");
   const [pagina, setPagina] = useState(1);
+  const [paginaProvincial, setPaginaProvincial] = useState(1);
   const [revision, setRevision] = useState(0);
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +149,7 @@ export function Searcher() {
     if (tipo !== "todos") params.set("tipo", tipo);
     if (estado !== "todos") params.set("estado", estado);
     params.set("pagina", String(pagina));
+    params.set("paginaProvincial", String(paginaProvincial));
     const controller = new AbortController();
     setCargando(true);
     fetch(`/api/buscar?${params.toString()}`, { signal: controller.signal })
@@ -152,7 +164,7 @@ export function Searcher() {
       })
       .finally(() => setCargando(false));
     return () => controller.abort();
-  }, [q, departamento, provincia, distrito, tipo, estado, pagina, revision]);
+  }, [q, departamento, provincia, distrito, tipo, estado, pagina, paginaProvincial, revision]);
 
   useEffect(() => {
     const ingestion = data?.ingestion;
@@ -189,6 +201,7 @@ export function Searcher() {
           event.preventDefault();
           setQ(draft);
           setPagina(1);
+                setPaginaProvincial(1);
         }}
       >
         <div className="grid gap-4 md:grid-cols-2">
@@ -204,6 +217,7 @@ export function Searcher() {
                 onChange={(event) => {
                   setDraft(event.target.value);
                   setPagina(1);
+                setPaginaProvincial(1);
                 }}
                 placeholder="Ej. Challabamba, Sullana, Acción Popular"
                 autoComplete="off"
@@ -222,6 +236,7 @@ export function Searcher() {
                 setProvincia("");
                 setDistrito("");
                 setPagina(1);
+                setPaginaProvincial(1);
               }}
             >
               <option value="">Todos</option>
@@ -241,6 +256,7 @@ export function Searcher() {
                 setProvincia(event.target.value);
                 setDistrito("");
                 setPagina(1);
+                setPaginaProvincial(1);
               }}
             >
               <option value="">Todas</option>
@@ -259,6 +275,7 @@ export function Searcher() {
               onChange={(event) => {
                 setDistrito(event.target.value);
                 setPagina(1);
+                setPaginaProvincial(1);
               }}
             >
               <option value="">Todos</option>
@@ -274,7 +291,8 @@ export function Searcher() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="tipo" className="mb-1 block text-sm font-semibold">Tipo</label>
-              <select id="tipo" className="field" value={tipo} onChange={(event) => { setTipo(event.target.value); setPagina(1); }}>
+              <select id="tipo" className="field" value={tipo} onChange={(event) => { setTipo(event.target.value); setPagina(1);
+                setPaginaProvincial(1); }}>
                 <option value="todos">Todos</option>
                 <option value="distrital">Distrital</option>
                 <option value="provincial">Provincial</option>
@@ -283,7 +301,8 @@ export function Searcher() {
             </div>
             <div>
               <label htmlFor="estado" className="mb-1 block text-sm font-semibold">Estado</label>
-              <select id="estado" className="field" value={estado} onChange={(event) => { setEstado(event.target.value); setPagina(1); }}>
+              <select id="estado" className="field" value={estado} onChange={(event) => { setEstado(event.target.value); setPagina(1);
+                setPaginaProvincial(1); }}>
                 <option value="todos">Todos</option>
                 <option value="con_acta">Con acta ubicada</option>
                 <option value="sin_acta">Sin acta en el índice</option>
@@ -306,6 +325,7 @@ export function Searcher() {
               setTipo("todos");
               setEstado("todos");
               setPagina(1);
+                setPaginaProvincial(1);
             }}
           >
             Limpiar
@@ -355,6 +375,7 @@ export function Searcher() {
             setProvincia("");
             setDistrito("");
             setPagina(1);
+                setPaginaProvincial(1);
           }}
         />
       </div>
@@ -445,79 +466,80 @@ export function Searcher() {
               : ""}
           </p>
         )}
-        <ol className="space-y-3">
-          {(data?.resultados || []).map((item) => (
-            <li key={item.id} className="border border-line border-t-4 border-t-gold bg-white p-4 sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-condensed text-sm font-semibold uppercase tracking-wide text-petrol">
-                    {item.ambito ? AMBITO[item.ambito] || item.ambito : "Evento del listado"}
-                  </p>
-                  <h3 className="font-condensed text-4xl font-bold leading-none text-ink">{item.titulo}</h3>
-                  <p className="mt-1 text-sm text-muted">{item.lugar}</p>
-                </div>
-                <Badge tone={toneFor(item.estado)}>{item.estadoEtiqueta}</Badge>
+        <div className="grid items-start gap-4 lg:grid-cols-3">
+          {(data?.grupos || []).map((grupo) => (
+            <section key={grupo.ambito} aria-labelledby={`grupo-${grupo.ambito}`} className="min-w-0 border border-line bg-white">
+              <div className="border-b-4 border-gold bg-petrol px-3 py-2 text-white">
+                <h3 id={`grupo-${grupo.ambito}`} className="font-condensed text-xl font-bold uppercase tracking-wide">{grupo.titulo}</h3>
+                <p className="text-sm text-white">{miles(grupo.total)} en este recorte</p>
               </div>
-              <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                {item.autoridad && (
-                  <div>
-                    <dt className="text-muted">{item.autoridad.cargo}</dt>
-                    <dd className="font-semibold">{item.autoridad.nombre}</dd>
-                    {item.autoridad.organizacion && <dd>{item.autoridad.organizacion}</dd>}
-                  </div>
-                )}
-                <div>
-                  <dt className="text-muted">Fecha del acta</dt>
-                  <dd>{fechaCorta(item.fechaActa) || "No leída"}</dd>
-                </div>
-                {item.jee && (
-                  <div>
-                    <dt className="text-muted">Jurado que publica</dt>
-                    <dd>{item.jee}</dd>
-                  </div>
-                )}
-                {item.fechaListadoEsFutura && (
-                  <div>
-                    <dt className="text-muted">Fecha en el listado</dt>
-                    <dd>Posterior a hoy. No confirma la proclamación.</dd>
-                  </div>
-                )}
-              </dl>
-              {item.nota && <p className="mt-3 text-sm leading-6 text-ink">{item.nota}</p>}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {item.pdfUrl && (
-                  <Button asChild>
-                    <a href={item.pdfUrl} target="_blank" rel="noreferrer">
-                      <FileText className="size-4" aria-hidden />
-                      PDF en el portal del JNE
-                    </a>
-                  </Button>
-                )}
-                {item.transmisionUrl && (
-                  <Button asChild variant="outline">
-                    <a href={item.transmisionUrl} target="_blank" rel="noreferrer">Transmisión anunciada</a>
-                  </Button>
-                )}
-              </div>
-              {item.fuentes.length > 0 && (
-                <p className="mt-3 text-xs text-muted">
-                  Fuente: listado público de proclamación ERM 2026, fila {item.fuentes.map((fuente) => fuente.idProclamacion).join(", ")}.
-                </p>
+              {grupo.resultados.length === 0 ? (
+                <p className="px-3 py-4 text-sm text-muted">Ninguno en este recorte.</p>
+              ) : (
+                <ol className="space-y-3 p-3">
+                  {grupo.resultados.map((item) => (
+                    <li key={item.id} className="border border-line border-t-4 border-t-gold bg-white p-3">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-petrol">
+                            {item.ambito ? AMBITO[item.ambito] || item.ambito : "Evento del listado"}
+                          </p>
+                          <h4 className="font-condensed text-2xl font-bold leading-none text-ink">{item.titulo}</h4>
+                          <p className="mt-1 text-sm text-muted">{item.lugar}</p>
+                        </div>
+                        <Badge tone={toneFor(item.estado)}>{item.estadoEtiqueta}</Badge>
+                      </div>
+                      <dl className="mt-2 space-y-1 text-sm">
+                        {item.autoridad && (
+                          <div>
+                            <dt className="text-muted">{item.autoridad.cargo}</dt>
+                            <dd className="font-semibold">{item.autoridad.nombre}</dd>
+                            {item.autoridad.organizacion && <dd>{item.autoridad.organizacion}</dd>}
+                          </div>
+                        )}
+                        <div>
+                          <dt className="text-muted">Fecha del acta</dt>
+                          <dd>{fechaCorta(item.fechaActa) || "No leída"}</dd>
+                        </div>
+                        {item.jee && (
+                          <div>
+                            <dt className="text-muted">Jurado que publica</dt>
+                            <dd>{item.jee}</dd>
+                          </div>
+                        )}
+                      </dl>
+                      {item.nota && <p className="mt-2 text-sm leading-5 text-ink">{item.nota}</p>}
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.pdfUrl && (
+                          <Button asChild>
+                            <a href={item.pdfUrl} target="_blank" rel="noreferrer">
+                              <FileText className="size-4" aria-hidden />
+                              PDF
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               )}
-            </li>
+              {grupo.ambito === "provincial" && grupo.paginas > 1 && (
+                <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
+                  <Button type="button" variant="outline" disabled={grupo.pagina <= 1} onClick={() => setPaginaProvincial((current) => Math.max(1, current - 1))}>Anterior</Button>
+                  <p className="text-xs">{grupo.pagina} / {grupo.paginas}</p>
+                  <Button type="button" variant="outline" disabled={grupo.pagina >= grupo.paginas} onClick={() => setPaginaProvincial((current) => current + 1)}>Siguiente</Button>
+                </div>
+              )}
+              {grupo.ambito === "distrital" && grupo.paginas > 1 && (
+                <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
+                  <Button type="button" variant="outline" disabled={grupo.pagina <= 1} onClick={() => setPagina((current) => Math.max(1, current - 1))}>Anterior</Button>
+                  <p className="text-xs">{grupo.pagina} / {grupo.paginas}</p>
+                  <Button type="button" variant="outline" disabled={grupo.pagina >= grupo.paginas} onClick={() => setPagina((current) => current + 1)}>Siguiente</Button>
+                </div>
+              )}
+            </section>
           ))}
-        </ol>
-        {data && (data.paginas || 1) > 1 && (
-          <div className="flex items-center justify-between gap-3">
-            <Button type="button" variant="outline" disabled={pagina <= 1} onClick={() => setPagina((current) => Math.max(1, current - 1))}>
-              Anterior
-            </Button>
-            <p className="text-sm">Página {data.pagina} de {data.paginas}</p>
-            <Button type="button" variant="outline" disabled={pagina >= (data.paginas || 1)} onClick={() => setPagina((current) => current + 1)}>
-              Siguiente
-            </Button>
-          </div>
-        )}
+        </div>
       </section>
 
       <section id="fuentes" className="order-6 space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6 lg:col-span-2">
