@@ -155,9 +155,10 @@ export function parseActa(text: string, catalog: Catalog): ParsedActa {
     return parsed;
   }
 
+  const place = String.raw`[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+(?:\s+(?!En\b|Siendo\b|se\b)[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+){0,6}`;
   if (clase === "autoridades_distritales") {
     const match = head.match(
-      /DISTRITO DE\s+(.+?),\s*PROVINCIA DE\s+(.+?),\s*DEPARTAMENTO DE\s+(.+?)(?:\s+En\b|$)/i,
+      new RegExp(`DISTRITO DE\\s+(${place}),\\s*PROVINCIA DE\\s+(${place}),\\s*DEPARTAMENTO DE\\s+(${place})`, "i"),
     );
     if (!match) return parsed;
     const dep = matchDepartamento(match[3], catalog);
@@ -178,7 +179,7 @@ export function parseActa(text: string, catalog: Catalog): ParsedActa {
   }
 
   if (clase === "autoridades_provinciales") {
-    const match = head.match(/PROVINCIA DE\s+(.+?),\s*DEPARTAMENTO DE\s+(.+?)(?:\s+En\b|$)/i);
+    const match = head.match(new RegExp(`PROVINCIA DE\\s+(${place}),\\s*DEPARTAMENTO DE\\s+(${place})`, "i"));
     if (!match) return parsed;
     const dep = matchDepartamento(match[2], catalog);
     const prov = dep ? matchProvincia(match[1], catalog, dep.codigo) : null;

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { buildCatalog } from "../src/lib/catalog";
 import { parseActa } from "../src/lib/parser";
+import { flatten } from "../src/lib/text";
 import { fixtureCatalog } from "./helpers";
 
 const catalog = fixtureCatalog();
@@ -100,6 +102,41 @@ test("extrae alcalde provincial con organización en dos líneas", () => {
   assert.equal(parsed.autoridad?.organizacion, "ALIANZA PARA EL PROGRESO");
   assert.equal(JSON.stringify(parsed).includes("12345678"), false);
   assert.equal(JSON.stringify(parsed).includes("WENDY"), false);
+});
+
+test("cruza Raimondi del acta con Raymondi del ubigeo y no traga el resto del encabezado", () => {
+  const catalog = buildCatalog([
+    { ubigeo: "020301", departamento: "ANCASH", provincia: "ANTONIO RAYMONDI", distrito: "LLAMELLIN", esCapitalProvincial: true },
+    { ubigeo: "020302", departamento: "ANCASH", provincia: "ANTONIO RAYMONDI", distrito: "ACZO", esCapitalProvincial: false },
+    { ubigeo: "020503", departamento: "ANCASH", provincia: "BOLOGNESI", distrito: "ANTONIO RAYMONDI", esCapitalProvincial: false },
+    { ubigeo: "120104", departamento: "JUNIN", provincia: "HUANCAYO", distrito: "CARHUACALLANGA", esCapitalProvincial: false },
+    { ubigeo: "120101", departamento: "JUNIN", provincia: "HUANCAYO", distrito: "HUANCAYO", esCapitalProvincial: true },
+    { ubigeo: "150101", departamento: "LIMA", provincia: "LIMA", distrito: "LIMA", esCapitalProvincial: true },
+    { ubigeo: "150117", departamento: "LIMA", provincia: "LIMA", distrito: "LOS OLIVOS", esCapitalProvincial: false },
+  ]);
+  const aczo = parseActa(
+    `MUNICIPALES DISTRITALES ELECTAS DISTRITO DE ACZO, PROVINCIA DE ANTONIO RAIMONDI, DEPARTAMENTO DE ANCASH En la ciudad de HUARI.`,
+    catalog,
+  );
+  assert.equal(aczo.ubigeo, "020302");
+  assert.equal(aczo.provincia, "ANTONIO RAYMONDI");
+  const bolognesi = parseActa(
+    `MUNICIPALES DISTRITALES ELECTAS DISTRITO DE ANTONIO RAIMONDI, PROVINCIA DE BOLOGNESI, DEPARTAMENTO DE ANCASH En la ciudad.`,
+    catalog,
+  );
+  assert.equal(bolognesi.ubigeo, "020503");
+  const junin = parseActa(
+    `MUNICIPALES DISTRITALES ELECTAS DISTRITO DE CARHUACALLANGA, PROVINCIA DE HUANCAYO, DEPARTAMENTO DE JUNIÍN En la ciudad.`,
+    catalog,
+  );
+  assert.equal(junin.ubigeo, "120104");
+  assert.equal(junin.departamento, "JUNIN");
+  const olivos = parseActa(
+    `MUNICIPALES DISTRITALES ELECTAS DISTRITO DE Los Olivos, PROVINCIA DE Lima, DEPARTAMENTO DE Lima 1 ACTA DE PROCLAMACIÓN DE AUTORIDADES MUNICIPALES DISTRITALES ELECTAS DISTRITO DE LOS OLIVOS, PROVINCIA DE LIMA, DEPARTAMENTO DE LIMA En la ciudad.`,
+    catalog,
+  );
+  assert.equal(olivos.ubigeo, "150117");
+  assert.equal(flatten("JUNIÍN"), "JUNÍN");
 });
 
 test("el acta regional descentralizada no proclama gobernador", () => {

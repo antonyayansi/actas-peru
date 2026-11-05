@@ -27,7 +27,10 @@ function sanitize(parsed: ParsedActa): ParsedActa {
 function needsPdf(state: IndexState, pdfPath: string): boolean {
   const current = state.pdfs[pdfPath];
   if (!current) return true;
-  if (current.status === "ok") return current.parserVersion !== PARSER_VERSION;
+  if (current.status === "ok") {
+    if (current.parserVersion !== PARSER_VERSION) return true;
+    return current.parsed?.confianza === "baja" && current.attempts < 3;
+  }
   return current.attempts < 2;
 }
 

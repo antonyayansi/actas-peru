@@ -8,12 +8,27 @@ export function squash(value: string): string {
   return stripAccents(value).toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+function repairDuplicatedAccent(value: string): string {
+  return value.replace(/([AaEeIiOoUu])([ÁÉÍÓÚáéíóú])/g, (all, base, accented) => {
+    const bare = accented.normalize("NFD").replace(/\p{M}/gu, "");
+    return bare.toLowerCase() === base.toLowerCase() ? accented : all;
+  });
+}
+
 export function flatten(value: string): string {
-  return value
+  return repairDuplicatedAccent(value)
     .replace(/\u00a0/g, " ")
     .replace(/[ \t]*\r?\n[ \t]*/g, " ")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
+}
+
+function spellingVariants(value: string): string[] {
+  const base = squash(value);
+  const variants = new Set([base]);
+  if (base.includes("RAIMONDI")) variants.add(base.replaceAll("RAIMONDI", "RAYMONDI"));
+  if (base.includes("RAYMONDI")) variants.add(base.replaceAll("RAYMONDI", "RAIMONDI"));
+  return [...variants];
 }
 
 export function titleCase(input: string): string {
@@ -114,13 +129,15 @@ export function pdfPublicUrl(path: string | null | undefined): string | null {
 export function bestNameMatch<T extends { nombre: string }>(window: string, items: T[]): T | null {
   const target = squash(window);
   if (!target) return null;
+  const targetVariants = new Set(spellingVariants(window));
   let best: T | null = null;
   let bestScore = -1;
   for (const item of items) {
     const name = squash(item.nombre);
     if (!name) continue;
+    const sameSpelling = spellingVariants(item.nombre).some((variant) => targetVariants.has(variant));
     let score = -1;
-    if (target === name) score = 5000 + name.length;
+    if (sameSpelling) score = 5000 + name.length;
     else if (target.startsWith(name) && target.length - name.length <= 1) score = 3000 + name.length;
     else if (name.startsWith(target) && name.length - target.length <= 1 && target.length >= 4) {
       score = 2000 + target.length;

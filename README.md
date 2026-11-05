@@ -37,7 +37,7 @@ npm test
 npm run serve
 ```
 
-`npm run serve` levanta el indexador y el sitio en [http://127.0.0.1:43123](http://127.0.0.1:43123). También puede correr `npm run index` en una terminal y `npm run dev` en otra.
+`npm run serve` levanta el indexador y el sitio en el puerto 43123 de la máquina donde corre el proceso. También puede usar `npm run index` en una terminal y `npm run dev` en otra. Esa dirección no es un enlace público: solo responde dentro de esa máquina.
 
 La revisión vuelve a leer el listado cada 30 minutos (`INDEX_INTERVAL_MINUTES`) y espera unos 900 ms entre PDF (`INDEX_DELAY_MS`). Eso ocurre en el proceso del indexador: no depende de tener el navegador abierto. Si la fuente responde con un bloqueo o un desafío, esa pasada se detiene y se conserva lo ya leído. En producción, `npm run build` y luego `npm run serve:prod`.
 
@@ -51,12 +51,14 @@ La primera pasada nacional de PDF puede durar más que esos 30 minutos. Recién 
 
 ## Despliegue
 
-Este repositorio no contrata hosting ni crea cuentas. Para dejarlo encendido hace falta una máquina con Node 22 que no se suspenda, disco persistente para `data/` y:
+Origin guarda el código. No publica la web. Este repositorio no contrata hosting ni crea cuentas.
+
+Para una URL pública por la ruta documentada hace falta que la titular conecte el repo Origin a Vercel (Vercel for Origin, planes Pro o Enterprise; un equipo Hobby no despliega repos Origin) e importe el proyecto. Otra ruta documentada es publicar desde Cursor Apps: la publicación la confirma la titular y Cursor crea la cuenta de hosting. Ninguna de las dos mantiene por sí sola el indexador residente ni el disco de `data/`. La lectura cada 30 minutos necesita un proceso Node 22 que no se suspenda y disco persistente:
 
 ```bash
 npm install
 npm run build
-npm start
+npm run serve:prod
 ```
 
-Si el proceso se apaga, la actualización se detiene. Un vistazo estático del código no sigue leyendo al JNE.
+Si ese proceso se apaga, la actualización se detiene. Un vistazo estático del código no sigue leyendo al JNE.
