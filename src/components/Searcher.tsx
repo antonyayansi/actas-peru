@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, FileText, RefreshCw, Search } from "lucide-react";
+import { CalculadoraPlazos, NormasPlazos } from "@/components/Plazos";
 import { MapaPeru } from "@/components/MapaPeru";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -573,6 +574,11 @@ export function Searcher() {
                 <h3 id={`grupo-${grupo.ambito}`} className="font-condensed text-xl font-bold uppercase tracking-wide">{grupo.titulo}</h3>
                 <CabeceraAvance tipo={(resumen?.tipos || []).find((tipo) => tipo.ambito === grupo.ambito)} />
               </div>
+              <CalculadoraPlazos
+                id={grupo.ambito}
+                fechaSugerida={grupo.resultados.find((item) => item.fechaActa && !item.fechaListadoEsFutura)?.fechaActa?.slice(0, 10) ?? null}
+                lugar={grupo.resultados.find((item) => item.fechaActa && !item.fechaListadoEsFutura)?.titulo ?? null}
+              />
               {grupo.resultados.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-muted">Ninguno en este recorte.</p>
               ) : (
@@ -640,6 +646,7 @@ export function Searcher() {
             </section>
           ))}
         </div>
+        <NormasPlazos />
       </section>
 
       <section id="fuentes" className="order-6 space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6 lg:col-span-2">
