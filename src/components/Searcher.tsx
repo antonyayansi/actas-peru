@@ -196,11 +196,10 @@ export function Searcher() {
             <label htmlFor="q" className="mb-1 block text-sm font-semibold">
               Buscar lugar, alcalde u organización
             </label>
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-3.5 size-4 text-petrol" aria-hidden />
+            <div className="search-field">
+              <Search className="size-4 shrink-0 text-petrol" aria-hidden />
               <input
                 id="q"
-                className="field pl-10"
                 value={draft}
                 onChange={(event) => {
                   setDraft(event.target.value);
