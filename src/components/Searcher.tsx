@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, FileText, RefreshCw, Search, Video } from "lucide-react";
+import { CalendarioActas } from "@/components/CalendarioActas";
+import { RutaAutoridades } from "@/components/RutaAutoridades";
 import { GraficosEntrega } from "@/components/GraficosEntrega";
 import { InfografiasGuias } from "@/components/InfografiasGuias";
 import { GraficaTransferencia } from "@/components/GraficaTransferencia";
@@ -68,8 +70,10 @@ interface Ingestion {
   pdfError: number;
   pdfSinDescargar: number;
   trabajando: boolean;
+  listingSyncedAt?: string | null;
   listingSyncedLabel: string | null;
   ultimoAvanceLabel: string | null;
+  generadoLabel?: string | null;
   intervalMinutes: number;
   datosValidos: boolean;
   recorte?: {
@@ -195,7 +199,7 @@ export function Searcher() {
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [indice, setIndice] = useState<IndiceEstatico | null>(null);
-  const [vista, setVista] = useState<"actas" | "calculadora" | "grafica" | "guias" | "infografias">("actas");
+  const [vista, setVista] = useState<"actas" | "calendario" | "ruta" | "calculadora" | "grafica" | "guias" | "infografias">("actas");
   const [nivelCalc, setNivelCalc] = useState<NivelEntidad | null>(null);
   const estatico = process.env.NEXT_PUBLIC_ESTATICO === "1";
 
@@ -295,6 +299,26 @@ export function Searcher() {
 
   const resumen = data?.resumen;
   const ingestion = data?.ingestion;
+  const minutosCopia = ingestion?.intervalMinutes && ingestion.intervalMinutes > 0 ? ingestion.intervalMinutes : 30;
+  const horaCopia = ingestion?.listingSyncedLabel || ingestion?.generadoLabel || null;
+
+  function actualizarIndice() {
+    setRevision((current) => current + 1);
+    if (estatico) {
+      fetch(`/datos/indice.json?t=${Date.now()}`)
+        .then((response) => response.json())
+        .then((payload: IndiceEstatico) => {
+          setIndice(payload);
+          setCatalogo(catalogoVisible(payload.catalog, payload.corpus.scopes));
+        })
+        .catch(() => setError("No se pudo actualizar el índice publicado."));
+      return;
+    }
+    fetch("/api/catalogo")
+      .then((response) => response.json())
+      .then(setCatalogo)
+      .catch(() => setError("No se pudo actualizar el catálogo territorial."));
+  }
 
   return (
     <div className="space-y-3">
@@ -307,6 +331,22 @@ export function Searcher() {
             onClick={() => setVista("actas")}
           >
             Actas
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "calendario" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "calendario" ? "bg-gold text-petrol" : "bg-[#fff6d6] text-petrol hover:bg-gold"}`}
+            onClick={() => setVista("calendario")}
+          >
+            Calendario
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "ruta" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "ruta" ? "bg-gold text-petrol" : "bg-[#fff6d6] text-petrol hover:bg-gold"}`}
+            onClick={() => setVista("ruta")}
+          >
+            Saliente y entrante
           </button>
           <button
             type="button"
@@ -342,7 +382,29 @@ export function Searcher() {
           </button>
         </div>
       </nav>
-      {vista === "calculadora" ? (
+      <div className="flex flex-wrap items-center justify-between gap-3 border border-line border-l-4 border-l-gold bg-white px-3 py-3 sm:px-4">
+        <p className="min-w-0 text-sm leading-5 text-ink">
+          Cada {minutosCopia} minutos el servidor copia el listado público de proclamación.
+          {horaCopia ? (
+            <>
+              {" "}
+              Última copia: <time className="font-condensed text-lg font-bold text-petrol" dateTime={ingestion?.listingSyncedAt || undefined}>{horaCopia}</time>.
+            </>
+          ) : (
+            " Esperando la primera copia."
+          )}
+          {ingestion?.trabajando && ingestion.ultimoAvanceLabel ? ` Sigue leyendo actas. Último avance: ${ingestion.ultimoAvanceLabel}.` : ""}
+        </p>
+        <Button type="button" className="shrink-0 bg-gold text-petrol hover:bg-[#e6ab00]" disabled={cargando} onClick={actualizarIndice}>
+          <RefreshCw className={cargando ? "size-4 animate-spin" : "size-4"} aria-hidden />
+          Actualizar
+        </Button>
+      </div>
+      {vista === "calendario" ? (
+        <CalendarioActas scopes={estatico ? indice?.corpus.scopes ?? null : undefined} />
+      ) : vista === "ruta" ? (
+        <RutaAutoridades />
+      ) : vista === "calculadora" ? (
         <VistaCalculadora
             nivel={nivelCalc}
             onNivel={(nivel) => {
@@ -521,32 +583,6 @@ export function Searcher() {
             }}
           >
             Limpiar
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={cargando}
-            onClick={() => {
-              setQ(draft);
-              setRevision((current) => current + 1);
-              if (estatico) {
-                fetch(`/datos/indice.json?t=${Date.now()}`)
-                  .then((response) => response.json())
-                  .then((payload: IndiceEstatico) => {
-                    setIndice(payload);
-                    setCatalogo(catalogoVisible(payload.catalog, payload.corpus.scopes));
-                  })
-                  .catch(() => setError("No se pudo actualizar el índice publicado."));
-                return;
-              }
-              fetch("/api/catalogo")
-                .then((response) => response.json())
-                .then(setCatalogo)
-                .catch(() => setError("No se pudo actualizar el catálogo territorial."));
-            }}
-          >
-            <RefreshCw className={cargando ? "size-4 animate-spin" : "size-4"} aria-hidden />
-            Actualizar
           </Button>
         </div>
       </form>

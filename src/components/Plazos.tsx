@@ -622,12 +622,12 @@ export function VistaGuias() {
       <section className="border border-line border-t-4 border-t-gold bg-white p-4" aria-labelledby="guias-titulo">
         <h2 id="guias-titulo" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Anexos, normas y guías</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-ink">
-          El cálculo de plazos usa la Directiva N.° 016-2022-CG/PREVI y la Resolución de Contraloría N.° 344-2026-CG.
+          El cálculo de plazos usa la Directiva N.° 016-2022-CG/PREVI, la Resolución de Contraloría N.° 344-2026-CG y la Orientación N.° 001-2026/CG/PREV/RCT-TG.
         </p>
         <p className="mt-3 border-l-4 border-gold bg-ice px-3 py-2 text-sm leading-6 text-ink">
           Las normas, los anexos y los instructivos son de la Contraloría General de la República.
           Esa entidad los publicó de manera pública. Planitec Perú no los redactó: los reúne aquí para consultarlos.
-          Los enlaces a gob.pe abren el archivo oficial. La versión integrada, la Resolución N.° 267-2022-CG y los instructivos son una copia de esa publicación pública, para poder descargarlos desde este sitio.
+          Los enlaces a gob.pe abren el archivo oficial. La versión integrada, la Resolución N.° 267-2022-CG, la Orientación N.° 001-2026/CG/PREV/RCT-TG y los instructivos son una copia de esa publicación pública, para poder descargarlos desde este sitio.
           Las láminas de cada sistema y de las secciones del informe están en Infografías.
         </p>
       </section>
@@ -635,6 +635,7 @@ export function VistaGuias() {
         <section className="border border-line bg-white" aria-labelledby="guias-normas">
           <h3 id="guias-normas" className="bg-petrol px-3 py-2 font-condensed text-xl font-bold uppercase tracking-wide text-white">Normas</h3>
           <ul className="space-y-2 p-3">
+            <EnlaceGuia href="/informacion/orientacion-001-2026-cg-rct-tg.pdf" nombre="Orientación N.° 001-2026/CG/PREV/RCT-TG. Transferencia por las ERM 2026" tipo="PDF" descarga="orientacion-001-2026-cg-rct-tg.pdf" />
             <EnlaceGuia href={NORMA_PLAZOS.ficha} nombre="Ficha oficial en gob.pe" tipo="Ficha" />
             <EnlaceGuia href="/informacion/directiva-016-2022-version-integrada.pdf" nombre="Directiva N.° 016-2022-CG/PREVI, versión integrada" tipo="PDF" descarga="directiva-016-2022-version-integrada.pdf" />
             <EnlaceGuia href="/informacion/resolucion-267-2022-cg.pdf" nombre="Resolución de Contraloría N.° 267-2022-CG" tipo="PDF" descarga="resolucion-267-2022-cg.pdf" />

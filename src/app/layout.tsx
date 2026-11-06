@@ -15,10 +15,10 @@ const condensed = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Actas abiertas ERM 2026 · Planitec Perú",
+  title: "Actas proclamadas ERM 2026 · Planitec Perú",
   description:
     "Buscador independiente de actas de proclamación de las Elecciones Regionales y Municipales 2026. No es un sitio del JNE.",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/planitec-pro.png" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
