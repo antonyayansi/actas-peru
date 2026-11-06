@@ -2,16 +2,35 @@
 
 import { useState } from "react";
 import { DEPARTAMENTOS_MAPA, FUENTE_MAPA, MAPA_VIEWBOX } from "@/lib/mapa";
-import type { MetricaDepartamento } from "@/lib/mapa-metricas";
-import { miles } from "@/lib/text";
+import { coberturaDepartamento, type MetricaDepartamento, type NivelCalor } from "@/lib/mapa-metricas";
+import { miles, porcentajeTexto } from "@/lib/text";
+
+const CALOR: Record<NivelCalor, string> = {
+  "sin-dato": "#F4F8FA",
+  ninguna: "#F4F7F8",
+  inicio: "#F8E7A8",
+  avance: "#FFD15C",
+  mayoria: "#FFBE00",
+  alta: "#C98900",
+};
+
+const LEYENDA: { nivel: NivelCalor; texto: string }[] = [
+  { nivel: "ninguna", texto: "Ninguna ubicada" },
+  { nivel: "inicio", texto: "Empieza" },
+  { nivel: "avance", texto: "Va avanzando" },
+  { nivel: "mayoria", texto: "Mayoría ubicada" },
+  { nivel: "alta", texto: "Casi todas" },
+];
 
 function etiqueta(metrica: MetricaDepartamento | undefined, nombre: string): string {
   if (!metrica) return nombre;
+  const cobertura = coberturaDepartamento(metrica);
   const linea = (titulo: string, tipo: MetricaDepartamento["distrital"]) =>
     tipo.ubicadas === null || tipo.esperadas === null
       ? `${titulo}: total pendiente`
       : `${titulo}: ${tipo.ubicadas} de ${tipo.esperadas}`;
-  return `${metrica.nombre}. ${linea("Distritales", metrica.distrital)}. ${linea("Provinciales", metrica.provincial)}. ${linea("Regional", metrica.regional)}. ${metrica.frase}`;
+  const calor = cobertura.porcentaje === null ? "Sin dato de avance" : `${porcentajeTexto(cobertura.porcentaje)} de actas ubicadas`;
+  return `${metrica.nombre}. ${calor}. ${linea("Distritales", metrica.distrital)}. ${linea("Provinciales", metrica.provincial)}. ${linea("Regional", metrica.regional)}. ${metrica.frase}`;
 }
 
 interface Props {
@@ -30,6 +49,7 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
   const [activo, setActivo] = useState<string | null>(null);
   const codigoVisible = activo || seleccionado || null;
   const metrica = metricas.find((item) => item.codigo === codigoVisible);
+  const cobertura = coberturaDepartamento(metrica);
   const porCodigo = new Map(metricas.map((item) => [item.codigo, item]));
 
   return (
@@ -51,8 +71,8 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
             const nombre = porCodigo.get(dep.codigo)?.nombre ?? dep.nombreFuente;
             const elegido = seleccionado === dep.codigo;
             const encima = activo === dep.codigo;
-            const fill = elegido ? "#00628A" : encima ? "#D6EAF2" : "#F4F8FA";
-            const stroke = elegido || encima ? "#FFBE00" : "#00628A";
+            const fill = CALOR[coberturaDepartamento(porCodigo.get(dep.codigo)).nivel];
+            const stroke = elegido ? "#004A69" : encima ? "#FFBE00" : "#00628A";
             return (
               <g key={dep.codigo}>
                 <path
@@ -90,11 +110,19 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
           {metrica ? (
             <dl className="mt-2 space-y-1">
               <div>
-                <dt className="text-muted">Distritales ubicadas</dt>
+                <dt className="text-muted">Actas ubicadas</dt>
+                <dd className="font-condensed text-2xl font-bold leading-none text-petrol">
+                  {cobertura.ubicadas === null || cobertura.esperadas === null || cobertura.porcentaje === null
+                    ? "—"
+                    : `${miles(cobertura.ubicadas)} de ${miles(cobertura.esperadas)} · ${porcentajeTexto(cobertura.porcentaje)}`}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted">Distritales</dt>
                 <dd className="font-semibold text-ink">{cifra(metrica.distrital)}</dd>
               </div>
               <div>
-                <dt className="text-muted">Provinciales ubicadas</dt>
+                <dt className="text-muted">Provinciales</dt>
                 <dd className="font-semibold text-ink">{cifra(metrica.provincial)}</dd>
               </div>
               <div>
@@ -109,10 +137,17 @@ export function MapaPeru({ seleccionado, metricas, revisionSinTerritorio, onSele
         </div>
       </div>
       <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-        <li className="flex items-center gap-1"><span className="inline-block h-3 w-3 border border-petrol bg-[#F4F8FA]" aria-hidden /> Sin elegir</li>
-        <li className="flex items-center gap-1"><span className="inline-block h-3 w-3 border border-gold bg-petrol" aria-hidden /> Elegido</li>
-        <li>El color no mide cobertura.</li>
+        {LEYENDA.map((item) => (
+          <li key={item.nivel} className="flex items-center gap-1">
+            <span className="inline-block h-3 w-3 border border-petrol" style={{ background: CALOR[item.nivel] }} aria-hidden />
+            {item.texto}
+          </li>
+        ))}
+        <li className="flex items-center gap-1"><span className="inline-block h-3 w-3 border-2 border-petrol-dark bg-white" aria-hidden /> Elegido</li>
       </ul>
+      <p className="mt-2 text-xs leading-5 text-muted">
+        El tono junta gobierno regional, municipalidades provinciales y distritales. Más dorado, más actas ya ubicadas. El claro es ninguna ubicada todavía.
+      </p>
       <p className="mt-2 text-xs leading-5 text-muted">
         {revisionSinTerritorio > 0
           ? `${miles(revisionSinTerritorio)} PDF siguen en revisión o sin territorio. No se pintan como ausencia ni entran en el departamento.`

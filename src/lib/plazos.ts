@@ -83,11 +83,37 @@ export const NORMA_PLAZOS = {
   carpetaEntidades: "https://www.gob.pe/institucion/contraloria/informes-publicaciones/3583709-modelo-de-informes-y-anexos-de-la-directiva-n-0016-2022-cg-previ-entidades",
 } as const;
 
+export type RolPlazo = "titular" | "saliente" | "entrante" | "etts" | "ette";
+
+export const ROLES_PLAZO: Record<RolPlazo, { nombre: string; obliga: string }> = {
+  titular: {
+    nombre: "Titular",
+    obliga: "Quien está a cargo. Firma, envía y publica la rendición. Numeral 6.3.1.",
+  },
+  saliente: {
+    nombre: "Titular saliente",
+    obliga: "Quien deja el cargo. Instala su equipo, envía la transferencia y firma el acta. Numeral 6.4.1.",
+  },
+  entrante: {
+    nombre: "Titular entrante",
+    obliga: "Quien asume tras la proclamación. Conforma su equipo, firma el acta y la publica. Numeral 6.4.2.",
+  },
+  etts: {
+    nombre: "Responsable del ETTS",
+    obliga: "Registra el equipo de quien sale y visa la transferencia. Numeral 6.4.3.",
+  },
+  ette: {
+    nombre: "Responsable del ETTE",
+    obliga: "Registra el acta de la comisión y de la transferencia. Numeral 6.4.4.",
+  },
+};
+
 export interface Plazo {
   id: string;
   etapa: string;
   fecha: string | null;
   detalle: string;
+  roles: RolPlazo[];
 }
 
 function utc(iso: string): Date {
@@ -148,72 +174,84 @@ export function plazosErm(fechaProclamacion: string | null): Plazo[] {
       etapa: "Instalar el ETTS",
       fecha: etts,
       detalle: "A más tardar cinco meses antes del cese. Directiva 016-2022, numeral 7.2.3, literal a, no modificado en 2026.",
+      roles: ["saliente"],
     },
     {
       id: "etts-registro",
       etapa: "Registrar el ETTS",
       fecha: ettsRegistro,
       detalle: "Un día hábil después de instalarlo, si la instalación es el último día permitido.",
+      roles: ["etts"],
     },
     {
       id: "rct-inicial",
       etapa: "Enviar el informe inicial de rendición",
       fecha: envioInicial,
       detalle: "Corte al 30 de setiembre del año electoral. Quince días hábiles después. Resolución de Contraloría 344-2026-CG, numeral 7.1.3, literal b.",
+      roles: ["titular"],
     },
     {
       id: "rct-publicacion",
       etapa: "Publicar el informe inicial",
       fecha: sumarHabiles(envioInicial, 5),
       detalle: "Cinco días hábiles después del envío, si se envía el último día.",
+      roles: ["titular"],
     },
     {
       id: "ette",
       etapa: "Conformar el ETTE",
       fecha: ette,
       detalle: "Tres días hábiles después de la proclamación. Numeral 7.2.3, literal c.1.",
+      roles: ["entrante"],
     },
     {
       id: "comision",
       etapa: "Instalar la comisión",
       fecha: comision,
       detalle: "Cinco días hábiles después de conformar el ETTE, si se conforma el último día.",
+      roles: ["saliente", "entrante"],
     },
     {
       id: "rct-final",
       etapa: "Enviar el informe final de rendición",
       fecha: envioCierre,
       detalle: "Corte al 31 de diciembre. Tres días hábiles después.",
+      roles: ["titular"],
     },
     {
       id: "tg-institucional",
       etapa: "Enviar la transferencia institucional",
       fecha: envioCierre,
       detalle: "Mismo corte y mismo plazo de tres días hábiles. Numeral 7.2.3, literal b.3.",
+      roles: ["saliente"],
     },
     {
       id: "tg-territorial",
       etapa: "Enviar la transferencia territorial",
       fecha: envioCierre,
       detalle: "Solo si la entidad tiene empresas, organismos o entidades vinculadas. Tres días hábiles después del 31 de diciembre.",
+      roles: ["saliente"],
     },
     {
       id: "acta",
       etapa: "Firmar el acta de transferencia",
       fecha: firmaActa,
       detalle: "Cinco días hábiles después del 31 de diciembre. Numeral 7.2.3, literal d.3.",
+      roles: ["saliente", "entrante"],
     },
     {
       id: "acta-envio",
       etapa: "Enviar el acta a la Contraloría",
       fecha: sumarHabiles(firmaActa, 2),
       detalle: "Dos días hábiles después de la firma, si se firma el último día.",
+      roles: ["ette"],
     },
     {
       id: "publicacion",
       etapa: "Publicar acta, informes y anexos",
       fecha: sumarHabiles(firmaActa, 5),
       detalle: "Cinco días hábiles después de la firma del acta.",
+      roles: ["entrante"],
     },
   ];
 }

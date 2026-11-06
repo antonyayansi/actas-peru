@@ -141,6 +141,50 @@ test("una fila distrital futura no se cuela en gobiernos regionales ni provincia
   assert.equal(distrital.resultados.some((item) => item.jee === "JEE ESPINAR"), false);
 });
 
+test("gobiernos regionales muestra todos y pone primero el que ya tiene acta", () => {
+  const pdfs: Record<string, PdfEntry> = {
+    "proclamaciones/cusco.pdf": {
+      status: "ok",
+      error: null,
+      parsed: {
+        clase: "autoridades_regionales",
+        departamento: "CUSCO",
+        provincia: null,
+        distrito: null,
+        departamentoCodigo: "08",
+        provinciaCodigo: null,
+        ubigeo: null,
+        lugarId: "regional:08",
+        ambito: "regional",
+        provinciasParciales: [],
+        fechaActa: "2026-11-05",
+        autoridad: { cargo: "Gobernador regional", nombre: "ALGUIEN", organizacion: null },
+        confianza: "alta",
+      },
+    },
+  };
+  const corpus = corpusDe(
+    [fila({ idProclamacion: 1, tipoEleccion: "REGIONAL", actaProclamacion: "proclamaciones/cusco.pdf" })],
+    pdfs,
+    now,
+  );
+  const regional = buscar(catalog, corpus, { tipo: "regional" }, 1, 25);
+  assert.equal(regional.total, catalog.departamentos.length);
+  assert.equal(regional.resultados[0]?.titulo, "Región Cusco");
+  assert.equal(regional.resultados[0]?.estado, "acta_publicada");
+  assert.ok(regional.resultados.slice(1).every((item) => item.estado === "sin_acta_ubicada"));
+});
+
+test("buscar Cusco en gobiernos regionales no muestra el cómputo de un jurado como proclamación", () => {
+  const corpus = corpusChallabamba(false);
+  const regional = buscar(catalog, corpus, { q: "cusco", tipo: "regional" });
+  assert.equal(regional.resultados.some((item) => item.estadoEtiqueta === "Cómputo regional descentralizado"), false);
+  const region = regional.resultados.find((item) => item.titulo === "Región Cusco");
+  assert.ok(region);
+  assert.equal(region.estadoEtiqueta, "Sin acta ubicada");
+  assert.doesNotMatch(region.estadoEtiqueta, /extracción/i);
+});
+
 test("la búsqueda ignora tildes y no mueve Challabamba a Quispicanchi", () => {
   const corpus = corpusChallabamba(false);
   const porTilde = buscar(catalog, corpus, { q: "Chállabamba" });

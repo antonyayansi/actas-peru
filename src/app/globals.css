@@ -71,6 +71,12 @@ svg [role="button"]:focus-visible {
   color: var(--color-muted);
 }
 
+select option.con-acta {
+  background-color: #ffe08a;
+  color: #004a69;
+  font-weight: 700;
+}
+
 .search-field {
   display: flex;
   align-items: center;

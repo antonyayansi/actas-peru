@@ -138,6 +138,7 @@ export function dedupeAmbitos(documents: Documento[]): AmbitoIndexado[] {
       fechaListado: doc.fechaListado,
       fechaActa: doc.fechaActa,
       jee: doc.jee,
+      transmisionUrl: doc.transmisionUrl,
     };
     const current = map.get(doc.dedupeKey);
     if (!current) {
@@ -156,6 +157,7 @@ export function dedupeAmbitos(documents: Documento[]): AmbitoIndexado[] {
         autoridad: doc.autoridad,
         jee: doc.jee,
         pdfUrl: doc.pdfUrl,
+        transmisionUrl: doc.transmisionUrl,
         fuentes: [fuente],
       });
       continue;
@@ -169,6 +171,7 @@ export function dedupeAmbitos(documents: Documento[]): AmbitoIndexado[] {
       current.autoridad = doc.autoridad ?? current.autoridad;
       current.jee = doc.jee || current.jee;
       current.pdfUrl = doc.pdfUrl ?? current.pdfUrl;
+      current.transmisionUrl = doc.transmisionUrl ?? current.transmisionUrl;
     }
   }
   return [...map.values()];

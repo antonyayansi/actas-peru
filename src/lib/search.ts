@@ -38,6 +38,7 @@ function textoDelDocumento(doc: Documento): string {
 function resultadoAmbito(
   scope: AmbitoIndexado,
   distrito: Distrito | null,
+  transmisionUrl: string | null,
 ): Resultado {
   const lugar = [scope.distrito ? `Distrito de ${titleCase(scope.distrito)}` : null, scope.provincia ? `Provincia de ${titleCase(scope.provincia)}` : null, titleCase(scope.departamento)]
     .filter(Boolean)
@@ -62,7 +63,7 @@ function resultadoAmbito(
     fechaListadoEsFutura: false,
     autoridad: scope.autoridad,
     pdfUrl: scope.pdfUrl,
-    transmisionUrl: null,
+    transmisionUrl,
     nota:
       scope.fuentes.length > 1
         ? `Hay ${scope.fuentes.length} publicaciones del listado para este mismo ámbito. Se muestra la más reciente.`
@@ -77,21 +78,17 @@ function resultadoVacio(
   titulo: string,
   lugar: string,
   ambito: Resultado["ambito"],
-  cierre: boolean,
   nota: string | null,
   esCapital: boolean,
 ): Resultado {
-  const pendiente = !cierre;
   return {
     id,
     tipoTarjeta: "ambito",
     ambito,
-    estado: esCapital ? "capital" : pendiente ? "pendiente_revision" : "sin_publicacion_encontrada",
+    estado: esCapital ? "capital" : "sin_acta_ubicada",
     estadoEtiqueta: esCapital
       ? "Distrito capital, sin elección distrital aparte"
-      : pendiente
-        ? "Pendiente de extracción/revisión"
-        : "Sin publicación encontrada",
+      : "Sin acta ubicada",
     titulo,
     lugar,
     jee: null,
@@ -151,6 +148,7 @@ function resultadoEvento(doc: Documento): Resultado {
         fechaListado: doc.fechaListado,
         fechaActa: doc.fechaActa,
         jee: doc.jee,
+        transmisionUrl: doc.transmisionUrl,
       },
     ],
     esCapitalProvincial: false,
@@ -177,6 +175,7 @@ function nivelDocumento(doc: Documento): Ambito | null {
 
 function quiereLugaresVacios(filtro: Filtro): boolean {
   if (filtro.estado === "con_acta" || filtro.estado === "pendiente") return false;
+  if (filtro.tipo === "regional" || filtro.tipo === "provincial" || filtro.tipo === "distrital") return true;
   return Boolean(filtro.q || filtro.departamento || filtro.provincia || filtro.distrito || filtro.estado === "sin_acta");
 }
 
@@ -185,8 +184,17 @@ function lugarCoincideTexto(texto: string, filtro: Filtro): boolean {
   return matchesQuery(texto, filtro.q);
 }
 
+export function consultaDeGrupo(filtro: Filtro, ambito: "regional" | "provincial" | "distrital", qColumna?: string): Filtro {
+  const partes = [filtro.q, qColumna].map((item) => item?.trim()).filter((item): item is string => Boolean(item));
+  return { ...filtro, tipo: ambito, q: partes.length ? partes.join(" ") : undefined };
+}
+
 export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina = 1, tamano = 20): Busqueda {
   const resumen = resumir(catalog, corpus, filtro);
+  const transmisionPorClave = new Map<string, string>();
+  for (const doc of corpus.documents) {
+    if (doc.dedupeKey && doc.transmisionUrl) transmisionPorClave.set(doc.dedupeKey, doc.transmisionUrl);
+  }
   const scopes = new Map(corpus.scopes.map((scope) => [scope.lugarId, scope]));
   const cards: Resultado[] = [];
   const seen = new Set<string>();
@@ -200,7 +208,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
     if (filtro.distrito && scope.lugarId !== filtro.distrito && scope.ubigeo !== filtro.distrito) return;
     if (!lugarCoincideTexto(textoDelNivel(scope), filtro)) return;
     const distrito = catalog.distritos.find((item) => item.lugarId === scope.lugarId) ?? null;
-    cards.push(resultadoAmbito(scope, distrito));
+    cards.push(resultadoAmbito(scope, distrito, scope.transmisionUrl || transmisionPorClave.get(scope.key) || null));
     seen.add(scope.key);
   };
 
@@ -226,7 +234,6 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
           `Región ${dep.nombreMostrar}`,
           dep.nombreMostrar,
           "regional",
-          resumen.cierre,
           "La fórmula de gobernador y vicegobernador corresponde al departamento completo.",
           false,
         ),
@@ -253,7 +260,6 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
           `Provincia de ${prov.nombreMostrar}`,
           `${prov.nombreMostrar} · ${dep?.nombreMostrar ?? ""}`,
           "provincial",
-          resumen.cierre,
           null,
           false,
         ),
@@ -283,7 +289,6 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
           dist.nombreMostrar,
           `Distrito de ${dist.nombreMostrar} · ${titleCase(dist.provincia)} · ${dep?.nombreMostrar ?? ""}`,
           "distrital",
-          resumen.cierre,
           dist.esCapitalProvincial
             ? "Este distrito es capital de provincia. Su alcaldía se elige con la municipalidad provincial, no como municipalidad distrital."
             : dist.nota,
@@ -305,6 +310,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
       if (filtro.estado === "con_acta" && doc.estado !== "acta_publicada") continue;
       if (filtro.estado === "sin_acta") continue;
       if (!parcial && !pendiente && doc.estado !== "programada_sin_acta" && doc.estado !== "sin_acta_en_fila") continue;
+      if (parcial && filtro.tipo === "regional") continue;
       if (filtro.tipo && filtro.tipo !== "todos" && nivelDocumento(doc) !== filtro.tipo) continue;
       if (filtro.departamento && doc.departamentoCodigo && doc.departamentoCodigo !== filtro.departamento) continue;
       if (filtro.departamento && !doc.departamentoCodigo && filtro.estado !== "pendiente") continue;
@@ -319,7 +325,7 @@ export function buscar(catalog: Catalog, corpus: Corpus, filtro: Filtro, pagina 
   }
 
   cards.sort((a, b) => {
-    const rank = (item: Resultado) => (item.estado === "acta_publicada" || item.estadoEtiqueta === "Cómputo regional descentralizado" ? 0 : item.esCapitalProvincial ? 2 : 1);
+    const rank = (item: Resultado) => (item.estado === "acta_publicada" ? 0 : item.estadoEtiqueta === "Cómputo regional descentralizado" ? 2 : item.esCapitalProvincial ? 3 : 1);
     const byRank = rank(a) - rank(b);
     if (byRank !== 0) return byRank;
     const ta = a.fechaActa || a.fechaListado || "";

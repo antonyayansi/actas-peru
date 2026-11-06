@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { loadCatalog } from "@/lib/catalog";
 import { saludDelRecorte } from "@/lib/counts";
 import { metricasPorDepartamento } from "@/lib/mapa-metricas";
-import { buscar } from "@/lib/search";
+import { buscar, consultaDeGrupo } from "@/lib/search";
 import { fechaHoraLima } from "@/lib/text";
 import type { Ambito, Filtro } from "@/lib/types";
 import { readSnapshot } from "@/indexer/state";
@@ -45,6 +45,12 @@ export function GET(request: NextRequest) {
   };
   const pagina = Number(params.get("pagina") || 1);
   const paginaProvincial = Number(params.get("paginaProvincial") || 1);
+  const paginaRegional = Number(params.get("paginaRegional") || 1);
+  const qColumna = {
+    regional: params.get("qRegional") || undefined,
+    provincial: params.get("qProvincial") || undefined,
+    distrital: params.get("qDistrital") || undefined,
+  };
   const catalogo = loadCatalog();
   const busqueda = buscar(catalogo, snapshot.corpus, filtro, Number.isFinite(pagina) ? pagina : 1, 20);
   const tiposVisibles = filtro.tipo && filtro.tipo !== "todos" ? [filtro.tipo] : (["regional", "provincial", "distrital"] as const);
@@ -54,12 +60,12 @@ export function GET(request: NextRequest) {
     distrital: "Distritales",
   } as const;
   const grupos = tiposVisibles.map((ambito) => {
-    const paginaGrupo = ambito === "distrital" ? pagina : ambito === "provincial" ? paginaProvincial : 1;
-    const tamano = ambito === "regional" ? 8 : 6;
+    const paginaGrupo = ambito === "distrital" ? pagina : ambito === "provincial" ? paginaProvincial : paginaRegional;
+    const tamano = ambito === "regional" ? 25 : 6;
     const encontrado = buscar(
       catalogo,
       snapshot.corpus,
-      { ...filtro, tipo: ambito },
+      consultaDeGrupo(filtro, ambito, qColumna[ambito]),
       Number.isFinite(paginaGrupo) ? paginaGrupo : 1,
       tamano,
     );

@@ -36,11 +36,38 @@ export function metricasPorDepartamento(catalog: Catalog, corpus: Corpus): Metri
       regional: tomar(resumen, "regional"),
       provincial: tomar(resumen, "provincial"),
       distrital: tomar(resumen, "distrital"),
-      frase: resumen.cierre
-        ? "Sin publicación encontrada no significa que falte la proclamación."
-        : "Se muestra lo ya ubicado. La lectura no está cerrada: el mapa no pinta la ausencia ni calcula un porcentaje.",
+      frase: "El color es la parte de actas ya ubicadas. Un tono claro no afirma que falte la proclamación.",
     };
   });
+}
+
+export type NivelCalor = "sin-dato" | "ninguna" | "inicio" | "avance" | "mayoria" | "alta";
+
+export function coberturaDepartamento(metrica: MetricaDepartamento | undefined): {
+  porcentaje: number | null;
+  nivel: NivelCalor;
+  ubicadas: number | null;
+  esperadas: number | null;
+} {
+  if (!metrica) return { porcentaje: null, nivel: "sin-dato", ubicadas: null, esperadas: null };
+  const partes = [metrica.regional, metrica.provincial, metrica.distrital];
+  if (partes.some((parte) => parte.ubicadas === null || parte.esperadas === null)) {
+    return { porcentaje: null, nivel: "sin-dato", ubicadas: null, esperadas: null };
+  }
+  const ubicadas = partes.reduce((suma, parte) => suma + (parte.ubicadas ?? 0), 0);
+  const esperadas = partes.reduce((suma, parte) => suma + (parte.esperadas ?? 0), 0);
+  if (esperadas <= 0) return { porcentaje: null, nivel: "sin-dato", ubicadas, esperadas };
+  const porcentaje = (ubicadas / esperadas) * 100;
+  const nivel: NivelCalor = ubicadas === 0
+    ? "ninguna"
+    : porcentaje < 25
+      ? "inicio"
+      : porcentaje < 50
+        ? "avance"
+        : porcentaje < 75
+          ? "mayoria"
+          : "alta";
+  return { porcentaje, nivel, ubicadas, esperadas };
 }
 
 export function fraseMapa(metrica: MetricaDepartamento | undefined): string {

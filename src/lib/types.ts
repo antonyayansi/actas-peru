@@ -135,6 +135,7 @@ export interface FuentePublicacion {
   fechaListado: string | null;
   fechaActa: string | null;
   jee: string;
+  transmisionUrl: string | null;
 }
 
 export interface AmbitoIndexado {
@@ -152,6 +153,7 @@ export interface AmbitoIndexado {
   autoridad: Autoridad | null;
   jee: string;
   pdfUrl: string | null;
+  transmisionUrl: string | null;
   fuentes: FuentePublicacion[];
 }
 

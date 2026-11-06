@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, FileText, RefreshCw, Search } from "lucide-react";
-import { CalculadoraPlazos, NormasPlazos } from "@/components/Plazos";
+import { AlertTriangle, FileText, RefreshCw, Search, Video } from "lucide-react";
+import { GraficosEntrega } from "@/components/GraficosEntrega";
+import { InfografiasGuias } from "@/components/InfografiasGuias";
+import { GraficaTransferencia } from "@/components/GraficaTransferencia";
+import { VistaCalculadora, VistaGuias, type NivelEntidad } from "@/components/Plazos";
 import { MapaPeru } from "@/components/MapaPeru";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,15 +21,18 @@ interface DistritoOpt {
   esCapitalProvincial: boolean;
   suplemento: boolean;
   nota: string | null;
+  conActa?: boolean;
 }
 interface ProvinciaOpt {
   codigo: string;
   nombre: string;
+  conActa?: boolean;
   distritos: DistritoOpt[];
 }
 interface DepartamentoOpt {
   codigo: string;
   nombre: string;
+  conActa?: boolean;
   provincias: ProvinciaOpt[];
 }
 interface Catalogo {
@@ -181,11 +187,16 @@ export function Searcher() {
   const [estado, setEstado] = useState("todos");
   const [pagina, setPagina] = useState(1);
   const [paginaProvincial, setPaginaProvincial] = useState(1);
+  const [paginaRegional, setPaginaRegional] = useState(1);
+  const [filtrosColumna, setFiltrosColumna] = useState({ regional: "", provincial: "", distrital: "" });
+  const [filtrosAplicados, setFiltrosAplicados] = useState({ regional: "", provincial: "", distrital: "" });
   const [revision, setRevision] = useState(0);
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [indice, setIndice] = useState<IndiceEstatico | null>(null);
+  const [vista, setVista] = useState<"actas" | "calculadora" | "grafica" | "guias" | "infografias">("actas");
+  const [nivelCalc, setNivelCalc] = useState<NivelEntidad | null>(null);
   const estatico = process.env.NEXT_PUBLIC_ESTATICO === "1";
 
   useEffect(() => {
@@ -194,7 +205,7 @@ export function Searcher() {
         .then((response) => response.json())
         .then((payload: IndiceEstatico) => {
           setIndice(payload);
-          setCatalogo(catalogoVisible(payload.catalog));
+          setCatalogo(catalogoVisible(payload.catalog, payload.corpus.scopes));
         })
         .catch(() => setError("No se pudo cargar el índice publicado."));
       return;
@@ -211,6 +222,11 @@ export function Searcher() {
   }, [draft]);
 
   useEffect(() => {
+    const handle = setTimeout(() => setFiltrosAplicados(filtrosColumna), 280);
+    return () => clearTimeout(handle);
+  }, [filtrosColumna]);
+
+  useEffect(() => {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
     if (departamento) params.set("departamento", departamento);
@@ -218,8 +234,12 @@ export function Searcher() {
     if (distrito) params.set("distrito", distrito);
     if (tipo !== "todos") params.set("tipo", tipo);
     if (estado !== "todos") params.set("estado", estado);
+    if (filtrosAplicados.regional) params.set("qRegional", filtrosAplicados.regional);
+    if (filtrosAplicados.provincial) params.set("qProvincial", filtrosAplicados.provincial);
+    if (filtrosAplicados.distrital) params.set("qDistrital", filtrosAplicados.distrital);
     params.set("pagina", String(pagina));
     params.set("paginaProvincial", String(paginaProvincial));
+    params.set("paginaRegional", String(paginaRegional));
     if (estatico) {
       if (!indice) return;
       setData(consultar(indice, {
@@ -231,6 +251,10 @@ export function Searcher() {
         estado,
         pagina,
         paginaProvincial,
+        paginaRegional,
+        qRegional: filtrosAplicados.regional,
+        qProvincial: filtrosAplicados.provincial,
+        qDistrital: filtrosAplicados.distrital,
       }));
       setError(null);
       setCargando(false);
@@ -250,7 +274,7 @@ export function Searcher() {
       })
       .finally(() => setCargando(false));
     return () => controller.abort();
-  }, [q, departamento, provincia, distrito, tipo, estado, pagina, paginaProvincial, revision, estatico, indice]);
+  }, [q, departamento, provincia, distrito, tipo, estado, pagina, paginaProvincial, paginaRegional, filtrosAplicados, revision, estatico, indice]);
 
   useEffect(() => {
     const ingestion = data?.ingestion;
@@ -265,32 +289,80 @@ export function Searcher() {
     [catalogo, departamento],
   );
   const distritos = useMemo(
-    () => provincias.find((item) => item.codigo === provincia)?.distritos ?? [],
+    () => (provincia ? provincias.find((item) => item.codigo === provincia)?.distritos ?? [] : provincias.flatMap((item) => item.distritos)),
     [provincias, provincia],
   );
 
   const resumen = data?.resumen;
   const ingestion = data?.ingestion;
-  const salud = ingestion?.recorte?.activo ? ingestion.recorte : ingestion;
-  const pdfMax = Math.max(salud?.pdfConRuta || 0, 1);
-  const pdfHechos = (salud?.pdfOk || 0) + (salud?.pdfRevision || 0) + (salud?.pdfError || 0);
-  const lugarRecorte = distrito
-    ? distritos.find((item) => item.lugarId === distrito)?.nombre
-    : provincia
-      ? provincias.find((item) => item.codigo === provincia)?.nombre
-      : departamento
-        ? catalogo?.departamentos.find((item) => item.codigo === departamento)?.nombre
-        : tipo === "regional"
-          ? "gobiernos regionales"
-          : tipo === "provincial"
-            ? "municipalidades provinciales"
-            : tipo === "distrital"
-              ? "municipalidades distritales"
-              : null;
 
   return (
-    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(300px,540px)_minmax(0,1fr)] lg:items-start [&>*]:min-w-0">
-      <section className="order-1 space-y-4 lg:col-start-2 lg:row-start-1" aria-labelledby="consulta">
+    <div className="space-y-3">
+      <nav className="border border-line bg-white" aria-label="Secciones">
+        <div className="flex flex-wrap">
+          <button
+            type="button"
+            aria-current={vista === "actas" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "actas" ? "bg-petrol text-white" : "text-petrol hover:bg-ice"}`}
+            onClick={() => setVista("actas")}
+          >
+            Actas
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "calculadora" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "calculadora" ? "bg-petrol text-white" : "text-petrol hover:bg-ice"}`}
+            onClick={() => setVista("calculadora")}
+          >
+            Calculadora de plazos
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "grafica" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "grafica" ? "bg-gold text-petrol" : "bg-[#fff6d6] text-petrol hover:bg-gold"}`}
+            onClick={() => setVista("grafica")}
+          >
+            Gráfica
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "guias" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "guias" ? "bg-petrol text-white" : "text-petrol hover:bg-ice"}`}
+            onClick={() => setVista("guias")}
+          >
+            Anexos y guías
+          </button>
+          <button
+            type="button"
+            aria-current={vista === "infografias" ? "page" : undefined}
+            className={`min-h-11 px-4 font-condensed text-lg font-bold uppercase tracking-wide ${vista === "infografias" ? "bg-gold text-petrol" : "bg-[#fff6d6] text-petrol hover:bg-gold"}`}
+            onClick={() => setVista("infografias")}
+          >
+            Infografías
+          </button>
+        </div>
+      </nav>
+      {vista === "calculadora" ? (
+        <VistaCalculadora
+            nivel={nivelCalc}
+            onNivel={(nivel) => {
+              setVista("calculadora");
+              setNivelCalc(nivel);
+            }}
+            catalogo={catalogo}
+            estatico={estatico}
+            indice={indice}
+          />
+      ) : vista === "grafica" ? (
+        <GraficaTransferencia />
+      ) : vista === "guias" ? (
+        <VistaGuias />
+      ) : vista === "infografias" ? (
+        <InfografiasGuias />
+      ) : (
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(280px,420px)_minmax(0,1fr)] lg:items-start [&>*]:min-w-0">
+      <div className="order-1 flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1">
+      <section className="space-y-4" aria-labelledby="consulta">
       <div className="flex items-center gap-3">
         <span className="mark" aria-hidden="true">1</span>
         <h2 id="consulta" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Consulta</h2>
@@ -341,7 +413,10 @@ export function Searcher() {
             >
               <option value="">Todos</option>
               {catalogo?.departamentos.map((item) => (
-                <option key={item.codigo} value={item.codigo}>{item.nombre}</option>
+                <option key={item.codigo} value={item.codigo} className={item.conActa ? "con-acta" : undefined}>
+                  {item.nombre}
+                  {item.conActa ? " · con acta" : ""}
+                </option>
               ))}
             </select>
           </div>
@@ -361,7 +436,10 @@ export function Searcher() {
             >
               <option value="">Todas</option>
               {provincias.map((item) => (
-                <option key={item.codigo} value={item.codigo}>{item.nombre}</option>
+                <option key={item.codigo} value={item.codigo} className={item.conActa ? "con-acta" : undefined}>
+                  {item.nombre}
+                  {item.conActa ? " · con acta" : ""}
+                </option>
               ))}
             </select>
           </div>
@@ -371,7 +449,7 @@ export function Searcher() {
               id="distrito"
               className="field"
               value={distrito}
-              disabled={!provincia}
+              disabled={!departamento}
               onChange={(event) => {
                 setDistrito(event.target.value);
                 setPagina(1);
@@ -379,13 +457,27 @@ export function Searcher() {
               }}
             >
               <option value="">Todos</option>
-              {distritos.map((item) => (
-                <option key={item.lugarId} value={item.lugarId}>
-                  {item.nombre}
-                  {item.esCapitalProvincial ? " · capital" : ""}
-                  {item.suplemento ? " · nuevo" : ""}
-                </option>
-              ))}
+              {provincia
+                ? distritos.map((item) => (
+                    <option key={item.lugarId} value={item.lugarId} className={item.conActa ? "con-acta" : undefined}>
+                      {item.nombre}
+                      {item.conActa ? " · con acta" : ""}
+                      {item.esCapitalProvincial ? " · capital" : ""}
+                      {item.suplemento ? " · nuevo" : ""}
+                    </option>
+                  ))
+                : provincias.map((grupo) => (
+                    <optgroup key={grupo.codigo} label={grupo.nombre}>
+                      {grupo.distritos.map((item) => (
+                        <option key={item.lugarId} value={item.lugarId} className={item.conActa ? "con-acta" : undefined}>
+                          {item.nombre}
+                          {item.conActa ? " · con acta" : ""}
+                          {item.esCapitalProvincial ? " · capital" : ""}
+                          {item.suplemento ? " · nuevo" : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -442,7 +534,7 @@ export function Searcher() {
                   .then((response) => response.json())
                   .then((payload: IndiceEstatico) => {
                     setIndice(payload);
-                    setCatalogo(catalogoVisible(payload.catalog));
+                    setCatalogo(catalogoVisible(payload.catalog, payload.corpus.scopes));
                   })
                   .catch(() => setError("No se pudo actualizar el índice publicado."));
                 return;
@@ -459,37 +551,8 @@ export function Searcher() {
         </div>
       </form>
       </section>
-
-      {error && (
-        <p role="alert" className="border border-[#e7b2a8] border-l-4 border-l-[#7a2e22] bg-white px-4 py-3 text-sm">
-          <AlertTriangle className="mr-2 inline size-4" aria-hidden />
-          {error}
-        </p>
-      )}
-      {data?.aviso && (
-        <p role="status" className="border border-gold border-l-4 bg-white px-4 py-3 text-sm">
-          {data.aviso}
-        </p>
-      )}
-      {data && !data.listo && (
-        <p role="status" className="panel px-4 py-3 text-sm">{data.mensaje}</p>
-      )}
-
-      <div className="order-2 min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1">
-        <MapaPeru
-          seleccionado={departamento}
-          metricas={data?.porDepartamento ?? []}
-          revisionSinTerritorio={(ingestion?.pdfRevision ?? 0) + (ingestion?.pdfError ?? 0)}
-          onSeleccionar={(codigo) => {
-            setDepartamento(codigo);
-            setProvincia("");
-            setDistrito("");
-            setPagina(1);
-                setPaginaProvincial(1);
-          }}
-        />
       </div>
-      <section aria-live="polite" aria-labelledby="resumen" className="order-3 space-y-2 lg:col-start-2 lg:row-start-2">
+      <section aria-live="polite" aria-labelledby="resumen" className="order-3 space-y-2 lg:col-span-2">
         <div className="flex items-end justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="mark" aria-hidden="true">2</span>
@@ -536,64 +599,48 @@ export function Searcher() {
           ))}
         </div>
       </section>
-
-      <section className="panel order-4 p-4 sm:p-5 lg:col-span-2" aria-labelledby="avance">
-        <div className="flex items-center gap-3">
-          <span className="mark" aria-hidden="true">3</span>
-          <h2 id="avance" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Salud de la ingestión</h2>
-        </div>
-        <p className="mt-3 text-sm text-muted">
-          {ingestion?.recorte?.activo
-            ? `Cifras de ${lugarRecorte || "este recorte"}. Miden la lectura de los PDF de ese filtro, no las proclamaciones.`
-            : "Esto mide la lectura del listado y de los PDF. No es el porcentaje de proclamaciones del país."}
+      {error && (
+        <p role="alert" className="order-0 border border-[#e7b2a8] border-l-4 border-l-[#7a2e22] bg-white px-4 py-3 text-sm lg:col-span-2">
+          <AlertTriangle className="mr-2 inline size-4" aria-hidden />
+          {error}
         </p>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <div className="mb-1 flex justify-between text-sm">
-              <span>PDFs procesados</span>
-              <span>{salud ? `${miles(pdfHechos)} / ${miles(salud.pdfConRuta)}` : "—"}</span>
-            </div>
-            <progress value={salud ? pdfHechos : 0} max={pdfMax} aria-label={ingestion?.recorte?.activo ? "Avance de lectura de PDF en este recorte" : "Avance de lectura de PDF"} />
+      )}
+      {data?.aviso && (
+        <p role="status" className="order-0 border border-gold border-l-4 bg-white px-4 py-3 text-sm lg:col-span-2">
+          {data.aviso}
+        </p>
+      )}
+      {data && !data.listo && (
+        <p role="status" className="panel order-0 px-4 py-3 text-sm lg:col-span-2">{data.mensaje}</p>
+      )}
+      <div className="order-2 min-w-0 lg:col-start-1 lg:row-start-1">
+        <MapaPeru
+          seleccionado={departamento}
+          metricas={data?.porDepartamento ?? []}
+          revisionSinTerritorio={(ingestion?.pdfRevision ?? 0) + (ingestion?.pdfError ?? 0)}
+          onSeleccionar={(codigo) => {
+            setDepartamento(codigo);
+            setProvincia("");
+            setDistrito("");
+            setPagina(1);
+            setPaginaProvincial(1);
+          }}
+        />
+      </div>
+        {departamento && (
+          <div className="order-4 lg:col-span-2">
+            <GraficosEntrega
+              nombre={provincia ? provincias.find((item) => item.codigo === provincia)?.nombre ?? "esta provincia" : catalogo?.departamentos.find((item) => item.codigo === departamento)?.nombre ?? "este departamento"}
+              provincias={provincia ? provincias.filter((item) => item.codigo === provincia) : provincias}
+              porDistrito={Boolean(provincia)}
+            />
           </div>
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-            <div><dt className="text-muted">{ingestion?.recorte?.activo ? "Filas en este recorte" : "Filas del listado"}</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.filas) : "—"}</dd></div>
-            <div>
-              <dt className="text-muted">{ingestion?.recorte?.activo ? "Sin territorio, fuera" : "Declaradas por la fuente"}</dt>
-              <dd className="font-condensed text-2xl font-bold text-petrol">
-                {ingestion?.recorte?.activo
-                  ? miles(ingestion.recorte.sinTerritorio)
-                  : ingestion?.declaredTotal
-                    ? miles(ingestion.declaredTotal)
-                    : "—"}
-              </dd>
-            </div>
-            <div><dt className="text-muted">Con territorio</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfOk) : "—"}</dd></div>
-            <div><dt className="text-muted">En revisión</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfRevision) : "—"}</dd></div>
-            <div><dt className="text-muted">Error de PDF</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfError) : "—"}</dd></div>
-            <div><dt className="text-muted">Sin descargar</dt><dd className="font-condensed text-2xl font-bold text-petrol">{salud ? miles(salud.pdfSinDescargar) : "—"}</dd></div>
-          </dl>
-        </div>
-        {ingestion?.recorte?.activo && ingestion.declaredTotal ? (
-          <p className="mt-3 text-sm text-muted">
-            La fuente declara {miles(ingestion.declaredTotal)} filas en todo el país. Ese total no se divide por territorio.
-            {ingestion.recorte.sinTerritorio > 0
-              ? ` ${miles(ingestion.recorte.sinTerritorio)} PDF aún no tienen territorio leído y quedan fuera de este recorte.`
-              : ""}
-          </p>
-        ) : null}
-        <p className="mt-3 text-sm">
-          Última sincronización exitosa: {ingestion?.listingSyncedLabel || "todavía no"}.
-          {" "}Revisión prevista cada {ingestion?.intervalMinutes || 30} minutos en el servidor, hora de Lima (UTC−5).
-          {ingestion?.trabajando ? " La lectura sigue en este momento." : ""}
-          {ingestion?.ultimoAvanceLabel ? ` Último avance: ${ingestion.ultimoAvanceLabel}.` : ""}
-        </p>
-        {ingestion?.listingError && <p className="mt-2 text-sm text-[#7a2e22]">{ingestion.listingError}</p>}
-      </section>
+        )}
 
       <section className="order-5 space-y-4 lg:col-span-2" aria-labelledby="resultados">
         <div className="flex items-end justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="mark" aria-hidden="true">4</span>
+            <span className="mark" aria-hidden="true">3</span>
             <h2 id="resultados" className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Resultados</h2>
           </div>
           <p className="text-sm text-muted">{data?.total === undefined ? "" : `${miles(data.total)} coincidencias`}</p>
@@ -611,19 +658,34 @@ export function Searcher() {
             <section key={grupo.ambito} aria-labelledby={`grupo-${grupo.ambito}`} className="min-w-0 border border-line bg-white">
               <div className="border-b-4 border-gold bg-petrol px-3 py-3 text-white">
                 <h3 id={`grupo-${grupo.ambito}`} className="font-condensed text-xl font-bold uppercase tracking-wide">{grupo.titulo}</h3>
+                <label className="sr-only" htmlFor={`buscar-${grupo.ambito}`}>Buscar en {grupo.titulo}</label>
+                <div className="search-field mt-2 bg-white">
+                  <Search className="size-4 shrink-0 text-petrol" aria-hidden />
+                  <input
+                    id={`buscar-${grupo.ambito}`}
+                    value={filtrosColumna[grupo.ambito]}
+                    placeholder="Nombre, alcalde o jurado"
+                    autoComplete="off"
+                    onChange={(event) => {
+                      const valor = event.target.value;
+                      setFiltrosColumna((actual) => ({ ...actual, [grupo.ambito]: valor }));
+                      if (grupo.ambito === "regional") setPaginaRegional(1);
+                      if (grupo.ambito === "provincial") setPaginaProvincial(1);
+                      if (grupo.ambito === "distrital") setPagina(1);
+                    }}
+                  />
+                </div>
                 <CabeceraAvance tipo={(resumen?.tipos || []).find((tipo) => tipo.ambito === grupo.ambito)} />
               </div>
-              <CalculadoraPlazos
-                id={grupo.ambito}
-                fechaSugerida={grupo.resultados.find((item) => item.fechaActa && !item.fechaListadoEsFutura)?.fechaActa?.slice(0, 10) ?? null}
-                lugar={grupo.resultados.find((item) => item.fechaActa && !item.fechaListadoEsFutura)?.titulo ?? null}
-              />
               {grupo.resultados.length === 0 ? (
-                <p className="px-3 py-4 text-sm text-muted">Ninguno en este recorte.</p>
+                <p className="px-3 py-4 text-sm text-muted">{filtrosColumna[grupo.ambito] ? "Ninguno con ese nombre en este recorte." : "Ninguno en este recorte."}</p>
               ) : (
                 <ol className="space-y-3 p-3">
                   {grupo.resultados.map((item) => (
-                    <li key={item.id} className="break-words border border-line border-t-4 border-t-gold bg-white p-3">
+                    <li
+                      key={item.id}
+                      className={`break-words border border-t-4 p-3 ${item.estado === "acta_publicada" ? "border-[#c98900] border-t-gold bg-[#fff6d6]" : "border-line border-t-[#d5e3ea] bg-white"}`}
+                    >
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                           <p className="font-condensed text-xs font-semibold uppercase tracking-wide text-petrol">
@@ -663,10 +725,25 @@ export function Searcher() {
                             </a>
                           </Button>
                         )}
+                        {item.transmisionUrl && (
+                          <Button asChild variant="outline">
+                            <a href={item.transmisionUrl} target="_blank" rel="noreferrer">
+                              <Video className="size-4" aria-hidden />
+                              Transmisión
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </li>
                   ))}
                 </ol>
+              )}
+              {grupo.ambito === "regional" && grupo.paginas > 1 && (
+                <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
+                  <Button type="button" variant="outline" disabled={grupo.pagina <= 1} onClick={() => setPaginaRegional((current) => Math.max(1, current - 1))}>Anterior</Button>
+                  <p className="text-xs">{grupo.pagina} / {grupo.paginas}</p>
+                  <Button type="button" variant="outline" disabled={grupo.pagina >= grupo.paginas} onClick={() => setPaginaRegional((current) => current + 1)}>Siguiente</Button>
+                </div>
               )}
               {grupo.ambito === "provincial" && grupo.paginas > 1 && (
                 <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2">
@@ -685,10 +762,9 @@ export function Searcher() {
             </section>
           ))}
         </div>
-        <NormasPlazos />
       </section>
 
-      <section id="fuentes" className="order-6 space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6 lg:col-span-2">
+      <section id="fuentes" className="order-7 space-y-3 border-t-4 border-petrol pt-6 text-sm leading-6 lg:col-span-2">
         <h2 className="font-condensed text-3xl font-bold uppercase tracking-wide text-petrol">Fuentes y reglas</h2>
         <p>
           El listado sale del cuadro público de proclamación ERM 2026. Cada fila es un evento de un jurado electoral especial, no una municipalidad. El territorio se lee del PDF. Por eso Challabamba, Caicay, Colquepata y Huancarani, en la provincia de Paucartambo, Cusco, pueden figurar bajo el JEE Quispicanchi.
@@ -708,6 +784,8 @@ export function Searcher() {
           </li>
         </ul>
       </section>
+      </div>
+      )}
     </div>
   );
 }

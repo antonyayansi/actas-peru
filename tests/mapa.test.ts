@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { loadCatalog } from "../src/lib/catalog";
 import { aplicarDepartamento, DEPARTAMENTOS_MAPA } from "../src/lib/mapa";
-import { fraseMapa, metricasPorDepartamento } from "../src/lib/mapa-metricas";
+import { coberturaDepartamento, fraseMapa, metricasPorDepartamento } from "../src/lib/mapa-metricas";
 import { squash } from "../src/lib/text";
 import type { Documento } from "../src/lib/types";
 import { actaChallabamba, corpusDe, fila, fixtureCatalog } from "./helpers";
@@ -72,7 +72,7 @@ test("las métricas del mapa separan Lima y Callao y no convierten la revisión 
   assert.equal(callao.distrital.ubicadas, 0);
   assert.equal(lima.distrital.porcentaje, null);
   assert.equal(lima.cierre, false);
-  assert.match(fraseMapa(lima), /no pinta la ausencia/i);
+  assert.match(fraseMapa(lima), /tono claro/i);
   assert.doesNotMatch(fraseMapa(lima), /sin proclamar/i);
   assert.equal(metricas.reduce((sum, item) => sum + (item.distrital.esperadas ?? 0), 0), 1696);
   assert.equal(metricas.reduce((sum, item) => sum + (item.provincial.esperadas ?? 0), 0), 196);
@@ -91,5 +91,8 @@ test("un acta de Cusco no se cuenta en otro departamento del mapa", () => {
   assert.equal(cusco?.distrital.ubicadas, 1);
   assert.equal(cusco?.distrital.esperadas, 2);
   assert.equal(piura?.distrital.ubicadas, 0);
+  assert.equal(coberturaDepartamento(piura).nivel, "ninguna");
+  assert.notEqual(coberturaDepartamento(cusco).nivel, "ninguna");
+  assert.ok((coberturaDepartamento(cusco).porcentaje ?? 0) > 0);
   assert.doesNotMatch(fraseMapa(cusco), /sin proclamar/i);
 });

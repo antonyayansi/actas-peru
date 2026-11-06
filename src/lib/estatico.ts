@@ -1,7 +1,7 @@
 import { DENOMINADOR } from "./catalog-shared";
 import { saludDelRecorte } from "./counts";
 import { metricasPorDepartamento } from "./mapa-metricas";
-import { buscar } from "./search";
+import { buscar, consultaDeGrupo } from "./search";
 import { fechaHoraLima } from "./text";
 import type { Ambito, Catalog, Corpus, Filtro } from "./types";
 
@@ -21,18 +21,37 @@ export interface ConsultaFiltro {
   estado?: string;
   pagina?: number;
   paginaProvincial?: number;
+  paginaRegional?: number;
+  qRegional?: string;
+  qProvincial?: string;
+  qDistrital?: string;
 }
 
-export function catalogoVisible(catalog: Catalog) {
+export function actasUbicadas(scopes: { lugarId: string; ambito: string }[]) {
+  const regional = new Set<string>();
+  const provincial = new Set<string>();
+  const distrital = new Set<string>();
+  for (const scope of scopes) {
+    if (scope.ambito === "regional") regional.add(scope.lugarId);
+    else if (scope.ambito === "provincial") provincial.add(scope.lugarId);
+    else if (scope.ambito === "distrital") distrital.add(scope.lugarId);
+  }
+  return { regional, provincial, distrital };
+}
+
+export function catalogoVisible(catalog: Catalog, scopes: { lugarId: string; ambito: string }[] = []) {
+  const actas = actasUbicadas(scopes);
   return {
     departamentos: catalog.departamentos.map((dep) => ({
       codigo: dep.codigo,
       nombre: dep.nombreMostrar,
+      conActa: actas.regional.has(`regional:${dep.codigo}`),
       provincias: catalog.provincias
         .filter((prov) => prov.departamentoCodigo === dep.codigo)
         .map((prov) => ({
           codigo: prov.codigo,
           nombre: prov.nombreMostrar,
+          conActa: actas.provincial.has(`provincial:${prov.codigo}`),
           distritos: catalog.distritos
             .filter((dist) => dist.provinciaCodigo === prov.codigo)
             .map((dist) => ({
@@ -41,6 +60,7 @@ export function catalogoVisible(catalog: Catalog) {
               esCapitalProvincial: dist.esCapitalProvincial,
               suplemento: dist.suplemento,
               nota: dist.nota,
+              conActa: actas.distrital.has(dist.lugarId),
             })),
         })),
     })),
@@ -70,13 +90,19 @@ export function consultar(indice: IndiceEstatico, entrada: ConsultaFiltro) {
   };
   const pagina = Number(entrada.pagina || 1);
   const paginaProvincial = Number(entrada.paginaProvincial || 1);
+  const paginaRegional = Number(entrada.paginaRegional || 1);
+  const qColumna = {
+    regional: entrada.qRegional,
+    provincial: entrada.qProvincial,
+    distrital: entrada.qDistrital,
+  };
   const busqueda = buscar(indice.catalog, indice.corpus, filtro, Number.isFinite(pagina) ? pagina : 1, 20);
   const tiposVisibles = filtro.tipo && filtro.tipo !== "todos" ? [filtro.tipo] : (["regional", "provincial", "distrital"] as const);
   const titulos = { regional: "Gobiernos regionales", provincial: "Provinciales", distrital: "Distritales" } as const;
   const grupos = tiposVisibles.map((ambito) => {
-    const paginaGrupo = ambito === "distrital" ? pagina : ambito === "provincial" ? paginaProvincial : 1;
-    const tamano = ambito === "regional" ? 8 : 6;
-    const encontrado = buscar(indice.catalog, indice.corpus, { ...filtro, tipo: ambito }, Number.isFinite(paginaGrupo) ? paginaGrupo : 1, tamano);
+    const paginaGrupo = ambito === "distrital" ? pagina : ambito === "provincial" ? paginaProvincial : paginaRegional;
+    const tamano = ambito === "regional" ? 25 : 6;
+    const encontrado = buscar(indice.catalog, indice.corpus, consultaDeGrupo(filtro, ambito, qColumna[ambito]), Number.isFinite(paginaGrupo) ? paginaGrupo : 1, tamano);
     return {
       ambito,
       titulo: titulos[ambito],

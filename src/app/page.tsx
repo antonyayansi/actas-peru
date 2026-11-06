@@ -42,6 +42,7 @@ export default function HomePage() {
       <footer className="bg-ice">
         <p className="mx-auto w-full max-w-[1440px] px-3 py-5 text-sm leading-6 text-muted sm:px-5 lg:px-6">
           Planitec Perú. El índice se alimenta del listado público y de los PDF publicados.
+          Las normas, los anexos y las guías son publicaciones públicas de la Contraloría General de la República. Este sitio no es su autor.
           La actualización corre en el servidor mientras el proceso esté encendido. No depende de dejar esta pestaña abierta.
         </p>
       </footer>
