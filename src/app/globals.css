@@ -146,3 +146,8 @@ progress::-webkit-progress-value {
 progress::-moz-progress-bar {
   background: var(--color-gold);
 }
+
+@media print {
+  .no-imprimir { display: none !important; }
+  #ficha-impresion { border: 0; }
+}

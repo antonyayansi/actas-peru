@@ -35,6 +35,7 @@ export default function HomePage() {
         <p className="mx-auto w-full max-w-[1440px] border-l-4 border-gold px-3 py-2 text-sm leading-6 text-ink sm:px-5 lg:px-6">
           Sitio independiente y no oficial. No usa el logo ni la identidad del JNE.
           Los PDF se abren en el portal público de origen. No se muestran números de DNI.
+          {" "}<a className="font-semibold text-petrol underline decoration-gold" href="/inversiones">Piloto de cartera de inversiones</a>.
         </p>
       </div>
       <section className="bg-petrol text-white" aria-labelledby="asesoria">
