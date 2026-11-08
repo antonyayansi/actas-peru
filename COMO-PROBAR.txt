@@ -1,0 +1,24 @@
+Cómo probar el piloto sin apagar el buscador de actas
+
+Este paquete no se instala solo. Hace falta una persona que lo abra en una computadora con Node.js 22. No usa el puerto 43123, para no reemplazar el sistema que ya está encendido.
+
+1. Descomprima esta carpeta.
+2. Ábrala en una terminal.
+3. Ejecute, en este orden:
+
+   npm install
+   npm test
+   npm run build
+   npx next start -H 127.0.0.1 -p 44731
+
+4. En el navegador abra:
+
+   http://127.0.0.1:44731/inversiones
+
+Ahí está Cotabambas y Paruro. Las actas y la calculadora de plazos siguen en:
+
+   http://127.0.0.1:44731/
+
+Si el 43123 ya está en uso, no lo cierre. Este piloto usa el 44731.
+
+No incluye claves. No se conecta solo al MEF. Los Excel de Cotabambas y Paruro ya vienen dentro.
