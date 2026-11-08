@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cuiDe, esLegacy, numero, sumarPresentes, type Celda, type Fila, type LibroRepOpmi } from "@/lib/inversiones/parse";
+import { PORTALES } from "@/lib/paquete/fuentes-portal";
+import { rutaInicial, resumenRuta, type ClasePunto, type EstadoVerificacion, type RutaOficinas } from "@/lib/paquete/oficinas";
+import { archivosDe, huecos, PIEZAS_COMPLETAS, type PiezasPaquete } from "@/lib/paquete/pedido";
 
 interface Infobra {
   cui: string;
@@ -52,6 +55,10 @@ export function PortalInversiones() {
   const [cui, setCui] = useState<string | null>(null);
   const [logo, setLogo] = useState<string | null>(null);
   const [vista, setVista] = useState<"cartera" | "ficha" | "acta">("cartera");
+  const [ruta, setRuta] = useState<RutaOficinas>(() => rutaInicial("cotabambas"));
+  const [piezas, setPiezas] = useState<PiezasPaquete>(PIEZAS_COMPLETAS);
+  const [sueltos, setSueltos] = useState<string[]>([]);
+  const [generando, setGenerando] = useState(false);
 
   useEffect(() => {
     const guardado = localStorage.getItem("logo-entidad-piloto");
@@ -69,6 +76,8 @@ export function PortalInversiones() {
         setCarga(cuerpo);
         setCui(null);
         setVista("cartera");
+        setRuta(rutaInicial(entidad));
+        setSueltos([]);
       })
       .catch((causa: unknown) => {
         if (causa instanceof DOMException && causa.name === "AbortError") return;
@@ -126,6 +135,51 @@ export function PortalInversiones() {
     setCui(null);
   }
 
+  function cuerpoPaquete(solo?: string) {
+    return JSON.stringify({
+      entidad: entidad === "cargada" ? null : entidad,
+      libro: entidad === "cargada" ? libro : undefined,
+      ruta,
+      piezas,
+      logo: logo && logo.length < 1_500_000 ? logo : null,
+      solo: solo ?? null,
+    });
+  }
+
+  async function descargar(solo?: string) {
+    if (!libro) return;
+    setGenerando(true);
+    setError(null);
+    try {
+      const respuesta = await fetch("/api/inversiones/paquete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: cuerpoPaquete(solo),
+      });
+      if (!respuesta.ok) {
+        const cuerpo = await respuesta.json();
+        throw new Error(cuerpo.error || "No se pudo generar el paquete.");
+      }
+      const blob = await respuesta.blob();
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement("a");
+      enlace.href = url;
+      enlace.download = solo ? solo.split("/").pop() || "archivo" : `paquete-${libro.opmi || "entidad"}.zip`;
+      enlace.click();
+      URL.revokeObjectURL(url);
+      if (!solo) setSueltos(archivosDe(libro.opmi || "entidad", ruta, piezas));
+    } catch (causa: unknown) {
+      setError(causa instanceof Error ? causa.message : "No se pudo generar el paquete.");
+    } finally {
+      setGenerando(false);
+    }
+  }
+
+  function cambiarPunto(indice: number, campo: "codigo" | "nombre" | "nota" | "clase" | "verificacion", valor: string) {
+    const puntos = ruta.puntos.map((punto, actual) => actual === indice ? { ...punto, [campo]: valor } : punto);
+    setRuta({ ...ruta, puntos });
+  }
+
   function cargarLogo(archivo: File) {
     const lector = new FileReader();
     lector.onload = () => {
@@ -181,6 +235,96 @@ export function PortalInversiones() {
             }} />
             <p className="text-xs leading-5 text-muted">El logo que cargue no es un sello ni una firma. No acredita conformidad del MEF, la Contraloría ni la municipalidad.</p>
           </form>
+        </section>
+
+        <section className="no-imprimir panel space-y-3 p-4">
+          <h2 className="font-condensed text-2xl font-bold uppercase text-petrol">Generar paquete de trabajo</h2>
+          <p className="text-sm leading-6">El sistema arma la presentación, la guía, las listas, los flujos y los gráficos con la cartera y la ruta de esta pantalla. No descarga solo los portales. Abajo está lo importado y lo pendiente.</p>
+          <ul className="grid gap-2 text-sm md:grid-cols-2">
+            {PORTALES.map((portal) => (
+              <li key={portal.id} className="border border-line px-3 py-2">
+                <span className="font-semibold text-petrol">{portal.nombre}</span>
+                <span className="mt-1 block">{portal.estado === "importado" ? "Datos importados" : portal.estado === "archivo_de_contraste" ? "Solo contraste, no es la cartera" : portal.estado === "pendiente_descarga" ? "Pendiente de descarga" : "No entra en esta versión"}</span>
+                <span className="mt-1 block text-xs text-muted">{portal.detalle}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="grid gap-2 md:grid-cols-2">
+            <label className="block text-sm">Norma o ROF de origen
+              <input className="field mt-1" aria-label="Norma o ROF de origen" value={ruta.fuente} onChange={(evento) => setRuta({ ...ruta, fuente: evento.target.value })} />
+            </label>
+            <label className="block text-sm">Fecha de esa norma
+              <input className="field mt-1" aria-label="Fecha de la norma" value={ruta.fechaNorma} onChange={(evento) => setRuta({ ...ruta, fechaNorma: evento.target.value })} placeholder="Sin fecha verificada" />
+            </label>
+          </div>
+          <label className="block text-sm">Modificatoria y fecha, si la hay
+            <textarea className="field mt-1 min-h-20" aria-label="Modificatoria" value={ruta.modificatoria} onChange={(evento) => setRuta({ ...ruta, modificatoria: evento.target.value })} />
+          </label>
+          <p className="text-sm">{resumenRuta(ruta)}</p>
+          <div className="max-h-80 space-y-2 overflow-auto">
+            {ruta.puntos.map((punto, indice) => (
+              <div key={`${punto.codigo}-${indice}`} className="grid gap-2 border border-line p-2 md:grid-cols-[6rem_1fr_9rem_11rem_auto]">
+                <input className="field" aria-label={`Código ${indice + 1}`} value={punto.codigo} onChange={(evento) => cambiarPunto(indice, "codigo", evento.target.value)} />
+                <input className="field" aria-label={`Nombre ${indice + 1}`} value={punto.nombre} onChange={(evento) => cambiarPunto(indice, "nombre", evento.target.value)} />
+                <select className="field" aria-label={`Clase ${indice + 1}`} value={punto.clase} onChange={(evento) => cambiarPunto(indice, "clase", evento.target.value as ClasePunto)}>
+                  <option value="unidad">Unidad</option>
+                  <option value="funcion">Función</option>
+                  <option value="area">Área</option>
+                  <option value="oci">Órgano de control</option>
+                </select>
+                <select className="field" aria-label={`Verificación ${indice + 1}`} value={punto.verificacion} onChange={(evento) => cambiarPunto(indice, "verificacion", evento.target.value as EstadoVerificacion)}>
+                  <option value="no_verificado">No verificado</option>
+                  <option value="provisional">Provisional</option>
+                  <option value="confirmado_por_usuario">Confirmado por mí</option>
+                </select>
+                <Button type="button" variant="outline" onClick={() => setRuta({ ...ruta, puntos: ruta.puntos.filter((_, actual) => actual !== indice) })}>Quitar</Button>
+              </div>
+            ))}
+          </div>
+          <Button type="button" variant="outline" onClick={() => setRuta({
+            ...ruta,
+            puntos: [...ruta.puntos, { codigo: `N-${String(ruta.puntos.length + 1).padStart(2, "0")}`, nombre: "Punto nuevo", clase: "unidad", verificacion: "no_verificado", nota: "Agregado en pantalla. Aún no está verificado con un reglamento." }],
+          })}>Agregar punto</Button>
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={ruta.confirmacion === "confirmada_por_usuario"} onChange={(evento) => setRuta({ ...ruta, confirmacion: evento.target.checked ? "confirmada_por_usuario" : "no_confirmada" })} />
+            <span>Marco la ruta como revisada por mí. Eso no convierte el texto en el reglamento oficial ni confirma cada punto.</span>
+          </label>
+          <fieldset className="grid gap-2 text-sm sm:grid-cols-2">
+            <legend className="font-semibold text-petrol">Piezas del paquete</legend>
+            {(Object.keys(PIEZAS_COMPLETAS) as (keyof PiezasPaquete)[]).map((clave) => (
+              <label key={clave} className="flex items-center gap-2">
+                <input type="checkbox" checked={piezas[clave]} onChange={(evento) => setPiezas({ ...piezas, [clave]: evento.target.checked })} />
+                {clave === "presentacion" ? "Presentación editable" : clave === "pdf" ? "Hoja de inicio en PDF" : clave === "guia" ? "Guía y fuentes en Word" : clave === "actas" ? "Listas de cada punto" : clave === "flujos" ? "Flujos editables" : clave === "graficos" ? "Gráficos editables" : "Datos y calidad"}
+              </label>
+            ))}
+          </fieldset>
+          <div>
+            <h3 className="font-semibold text-petrol">Vista previa del contenido</h3>
+            <ul className="mt-1 max-h-36 overflow-auto text-sm">
+              {(libro ? archivosDe(libro.opmi || "entidad", ruta, piezas) : ["Primero elija o cargue una cartera."]).map((nombre) => <li key={nombre}>{nombre}</li>)}
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-semibold text-petrol">Qué sigue abierto</h3>
+            <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+              {huecos(ruta, Boolean(libro), Boolean(logo)).map((falta) => <li key={falta}>{falta}</li>)}
+            </ul>
+          </div>
+          <Button type="button" disabled={!libro || generando || ruta.puntos.length === 0} onClick={() => void descargar()}>
+            {generando ? "Generando…" : "Generar paquete"}
+          </Button>
+          {sueltos.length > 0 && (
+            <div>
+              <h3 className="font-semibold text-petrol">Descargar un archivo del último paquete</h3>
+              <ul className="mt-2 max-h-48 space-y-1 overflow-auto text-sm">
+                {sueltos.map((nombre) => (
+                  <li key={nombre}>
+                    <button type="button" className="text-left font-semibold text-petrol underline decoration-gold" onClick={() => void descargar(nombre)}>{nombre.split("/").pop()}</button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
 
         {error && <p role="alert" className="border border-[#e7b2a8] bg-white px-4 py-3 text-sm">{error}</p>}
@@ -274,8 +418,13 @@ export function PortalInversiones() {
               <h2 className="font-condensed text-xl font-bold uppercase text-petrol">Fuente, fecha y calidad</h2>
               <ul className="mt-2 list-disc space-y-1 pl-5">
                 {libro.calidad.map((nota) => <li key={nota}>{nota}</li>)}
-                <li>Descarga del 8 de noviembre de 2026. No es la situación de hoy.</li>
-                <li>Cotabambas en el archivo completo: 403 registros del pliego municipal y 12 de otros pliegos. PIM total S/ 146 089 453; devengado S/ 75 777 679,51. Del pliego municipal: PIM S/ 132 214 684; devengado S/ 68 123 352,91.</li>
+                <li>{libro.exportadoEn || "Sin fecha de exportación"}. No es la situación de hoy.</li>
+                <li>
+                  En este archivo: {libro.inversiones.filter((fila) => fila.celdas.pliego_entidad_uei_uf === libro.pliegoPropio).length} registros del pliego «{libro.pliegoPropio || "sin dato"}»
+                  {" "}y {libro.inversiones.length - libro.inversiones.filter((fila) => fila.celdas.pliego_entidad_uei_uf === libro.pliegoPropio).length} de otros pliegos.
+                  {" "}PIM total {soles(sumarPresentes(libro.inversiones, "pim_2026").suma)}; devengado {soles(sumarPresentes(libro.inversiones, "devengado_2026").suma)}.
+                  {" "}Del pliego más frecuente: PIM {soles(sumarPresentes(libro.inversiones.filter((fila) => fila.celdas.pliego_entidad_uei_uf === libro.pliegoPropio), "pim_2026").suma)}; devengado {soles(sumarPresentes(libro.inversiones.filter((fila) => fila.celdas.pliego_entidad_uei_uf === libro.pliegoPropio), "devengado_2026").suma)}.
+                </li>
                 <li>El export SSI revisado rotula PIM 2023 y DEVENGADO 2023, pero en los CUI comunes los valores coinciden con 2026. No se renombra en silencio. Ese archivo no se mezcla aquí.</li>
                 <li>Consulta Avanzada trae filas repetidas por lugar. No se suma dinero sobre esas filas. Los 57 desactivados temporales aparecen en RepOpmi y no en esa consulta geográfica.</li>
                 <li>INFOBRAS, archivo público: {infobras ? `${infobras.cui} CUI y ${infobras.filas} obras` : "sin cruce para esta entidad"}. Un CUI sin match no está acreditado como inexistente.</li>

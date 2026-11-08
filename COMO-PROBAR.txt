@@ -15,7 +15,9 @@ Este paquete no se instala solo. Hace falta una persona que lo abra en una compu
 
    http://127.0.0.1:44731/inversiones
 
-Ahí está Cotabambas y Paruro. Las actas y la calculadora de plazos siguen en:
+Ahí está Cotabambas y Paruro. En la misma pantalla, «Generar paquete» arma un ZIP con PowerPoint, Word, PDF, flujos y gráficos de la entidad elegida. Puede quitar piezas, editar los puntos y bajar un archivo suelto. Ese ZIP es un modelo de trabajo: no descarga solo el MEF ni confirma el ROF de Cotabambas.
+
+Las actas y la calculadora de plazos siguen en:
 
    http://127.0.0.1:44731/
 
